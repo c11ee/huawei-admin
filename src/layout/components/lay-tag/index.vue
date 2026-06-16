@@ -629,7 +629,7 @@ onBeforeUnmount(() => {
             >
               <IconifyIconOffline :icon="Close" />
             </span>
-            <span class="chrome-tab-divider" />
+            <span class="chrome-tab-divider bg-[#e2e2e2] dark:bg-[#2d2d2d]" />
           </div>
         </div>
       </div>

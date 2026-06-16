@@ -120,7 +120,7 @@ const whiteList = ["/login"];
 
 const { VITE_HIDE_HOME } = import.meta.env;
 
-router.beforeEach((to: ToRouteType, _from, next) => {
+router.beforeEach(async (to: ToRouteType, _from, next) => {
   to.meta.loaded = loadedPaths.has(to.path);
 
   if (!to.meta.loaded) {
@@ -180,7 +180,8 @@ router.beforeEach((to: ToRouteType, _from, next) => {
         // 更新用户信息
         useUserStoreHook().getUserInfo();
         // 刷新路由
-        initRouter().then((router: Router) => {
+        await initRouter().then((router: Router) => {
+          // loadingInstance.close();
           if (!useMultiTagsStoreHook().getMultiTagsCache) {
             const { path } = to;
             const route = findRouteByPath(
@@ -211,6 +212,7 @@ router.beforeEach((to: ToRouteType, _from, next) => {
           // 确保动态路由完全加入路由列表并且不影响静态路由（注意：动态路由刷新时router.beforeEach可能会触发两次，第一次触发动态路由还未完全添加，第二次动态路由才完全添加到路由列表，如果需要在router.beforeEach做一些判断可以在to.name存在的条件下去判断，这样就只会触发一次）
           if (isAllEmpty(to.name)) router.push(to.fullPath);
         });
+        // console.log("路由刷新完成");
       }
       toCorrectRoute();
     }
