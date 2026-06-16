@@ -69,24 +69,36 @@ class PureHttp {
           PureHttp.initConfig.beforeRequestCallback(config);
           return config;
         }
+        // 增加前缀
+        config.url =
+          import.meta.env.VITE_API_BASE_URL + "api/admin" + config.url;
+
+        // 刷新token接口
+        if (config.url.endsWith("/refresh-token")) {
+          const data = getToken();
+          config.headers["Authorization"] = formatToken(data.refresh_token);
+          return config;
+        }
         /** 请求白名单，放置一些不需要`token`的接口（通过设置请求白名单，防止`token`过期后再请求造成的死循环问题） */
-        const whiteList = ["/refresh-token", "/login"];
+        const whiteList = ["/login"];
         return whiteList.some(url => config.url.endsWith(url))
           ? config
           : new Promise(resolve => {
               const data = getToken();
               if (data) {
-                const now = new Date().getTime();
-                const expired = parseInt(data.expires) - now <= 0;
+                const now = Math.floor(Date.now() / 1000);
+                // 是否过期
+                const expired = data.expires_at - now <= 0;
+
                 if (expired) {
                   if (!PureHttp.isRefreshing) {
                     PureHttp.isRefreshing = true;
+
                     // token过期刷新
                     useUserStoreHook()
-                      .handRefreshToken({ refreshToken: data.refreshToken })
+                      .handRefreshToken()
                       .then(res => {
-                        const token = res.data.accessToken;
-                        config.headers["Authorization"] = formatToken(token);
+                        const token = res.access_token;
                         PureHttp.requests.forEach(cb => cb(token));
                         PureHttp.requests = [];
                       })
@@ -94,10 +106,11 @@ class PureHttp {
                         PureHttp.isRefreshing = false;
                       });
                   }
+                  // 重连原始请求
                   resolve(PureHttp.retryOriginalRequest(config));
                 } else {
                   config.headers["Authorization"] = formatToken(
-                    data.accessToken
+                    data.access_token
                   );
                   resolve(config);
                 }
@@ -118,16 +131,24 @@ class PureHttp {
     instance.interceptors.response.use(
       (response: PureHttpResponse) => {
         const $config = response.config;
+        const data = response.data;
         // 优先判断post/get等方法是否传入回调，否则执行初始化设置等回调
         if (typeof $config.beforeResponseCallback === "function") {
           $config.beforeResponseCallback(response);
-          return response.data;
+          return data;
         }
         if (PureHttp.initConfig.beforeResponseCallback) {
           PureHttp.initConfig.beforeResponseCallback(response);
-          return response.data;
+          return data;
         }
-        return response.data;
+
+        switch (data.code) {
+          case 401:
+            useUserStoreHook().logOut();
+            break;
+        }
+
+        return data;
       },
       (error: PureHttpError) => {
         const $error = error;

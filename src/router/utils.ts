@@ -14,20 +14,22 @@ import {
   isAllEmpty,
   intersection,
   storageLocal,
-  isIncludeAllChildren
+  isIncludeAllChildren,
+  nameCamelize
 } from "@pureadmin/utils";
 import { getConfig } from "@/config";
 import { buildHierarchyTree } from "@/utils/tree";
-import { userKey, type DataInfo } from "@/utils/auth";
+import { permissionKey } from "@/utils/auth";
 import { type menuType, routerArrays } from "@/layout/types";
 import { useMultiTagsStoreHook } from "@/store/modules/multiTags";
 import { usePermissionStoreHook } from "@/store/modules/permission";
+import { useUserStoreHook } from "@/store/modules/user";
 const IFrame = () => import("@/layout/frame.vue");
 // https://cn.vitejs.dev/guide/features.html#glob-import
 const modulesRoutes = import.meta.glob("/src/views/**/*.{vue,tsx}");
 
 // 动态路由
-import { getAsyncRoutes } from "@/api/routes";
+import { Menu, UserPermission } from "@/api/types/user";
 
 function handRank(routeInfo: any) {
   const { name, path, parentId, meta } = routeInfo;
@@ -41,15 +43,17 @@ function handRank(routeInfo: any) {
 
 /** 按照路由中meta下的rank等级升序来排序路由 */
 function ascending(arr: any[]) {
-  arr.forEach((v, index) => {
-    // 当rank不存在时，根据顺序自动创建，首页路由永远在第一位
-    if (handRank(v)) v.meta.rank = index + 2;
-  });
-  return arr.sort(
-    (a: { meta: { rank: number } }, b: { meta: { rank: number } }) => {
-      return a?.meta.rank - b?.meta.rank;
-    }
-  );
+  // 后端已处理排序
+  return arr;
+  // arr.forEach((v, index) => {
+  //   // 当rank不存在时，根据顺序自动创建，首页路由永远在第一位
+  //   if (handRank(v)) v.meta.rank = index + 2;
+  // });
+  // return arr.sort(
+  //   (a: { meta: { rank: number } }, b: { meta: { rank: number } }) => {
+  //     return a?.meta.rank - b?.meta.rank;
+  //   }
+  // );
 }
 
 /** 过滤meta中showLink为false的菜单 */
@@ -83,10 +87,11 @@ function isOneOfArray(a: Array<string>, b: Array<string>) {
 
 /** 从localStorage里取出当前登录用户的角色roles，过滤无权限的菜单 */
 function filterNoPermissionTree(data: RouteComponent[]) {
-  const currentRoles =
-    storageLocal().getItem<DataInfo<number>>(userKey)?.roles ?? [];
+  const currentPermissions =
+    storageLocal().getItem<UserPermission>(permissionKey)?.button_permissions ??
+    [];
   const newTree = cloneDeep(data).filter((v: any) =>
-    isOneOfArray(v.meta?.roles, currentRoles)
+    isOneOfArray(v.meta?.permissions, currentPermissions)
   );
   newTree.forEach(
     (v: any) => v.children && (v.children = filterNoPermissionTree(v.children))
@@ -155,35 +160,34 @@ function addPathMatch() {
 }
 
 /** 处理动态路由（后端返回的路由） */
-function handleAsyncRoutes(routeList) {
-  if (routeList.length === 0) {
-    usePermissionStoreHook().handleWholeMenus(routeList);
+function handleAsyncRoutes(routeList: RouteRecordRaw[] | null) {
+  const data = routeList || [];
+  if (data.length === 0) {
+    usePermissionStoreHook().handleWholeMenus(data);
   } else {
-    formatFlatteningRoutes(addAsyncRoutes(routeList)).map(
-      (v: RouteRecordRaw) => {
-        // 防止重复添加路由
-        if (
-          router.options.routes[0].children.findIndex(
-            value => value.path === v.path
-          ) !== -1
-        ) {
-          return;
-        } else {
-          // 切记将路由push到routes后还需要使用addRoute，这样路由才能正常跳转
-          router.options.routes[0].children.push(v);
-          // 最终路由进行升序
-          ascending(router.options.routes[0].children);
-          if (!router.hasRoute(v?.name)) router.addRoute(v);
-          const flattenRouters: any = router
-            .getRoutes()
-            .find(n => n.path === "/");
-          // 保持router.options.routes[0].children与path为"/"的children一致，防止数据不一致导致异常
-          flattenRouters.children = router.options.routes[0].children;
-          router.addRoute(flattenRouters);
-        }
+    formatFlatteningRoutes(addAsyncRoutes(data)).map((v: RouteRecordRaw) => {
+      // 防止重复添加路由
+      if (
+        router.options.routes[0].children.findIndex(
+          value => value.path === v.path
+        ) !== -1
+      ) {
+        return;
+      } else {
+        // 切记将路由push到routes后还需要使用addRoute，这样路由才能正常跳转
+        router.options.routes[0].children.push(v);
+        // 最终路由进行升序
+        ascending(router.options.routes[0].children);
+        if (!router.hasRoute(v?.name)) router.addRoute(v);
+        const flattenRouters: any = router
+          .getRoutes()
+          .find(n => n.path === "/");
+        // 保持router.options.routes[0].children与path为"/"的children一致，防止数据不一致导致异常
+        flattenRouters.children = router.options.routes[0].children;
+        router.addRoute(flattenRouters);
       }
-    );
-    usePermissionStoreHook().handleWholeMenus(routeList);
+    });
+    usePermissionStoreHook().handleWholeMenus(data);
   }
   if (!useMultiTagsStoreHook().getMultiTagsCache) {
     useMultiTagsStoreHook().handleTags("equal", [
@@ -209,19 +213,25 @@ function initRouter() {
       });
     } else {
       return new Promise(resolve => {
-        getAsyncRoutes().then(({ data }) => {
-          handleAsyncRoutes(cloneDeep(data));
-          storageLocal().setItem(key, data);
-          resolve(router);
-        });
+        useUserStoreHook()
+          .getUserPermissions()
+          .then(data => {
+            const newRoutes = formatRoutes(data.menu_permissions);
+            handleAsyncRoutes(newRoutes);
+            storageLocal().setItem(key, newRoutes);
+            resolve(router);
+          });
       });
     }
   } else {
     return new Promise(resolve => {
-      getAsyncRoutes().then(({ data }) => {
-        handleAsyncRoutes(cloneDeep(data));
-        resolve(router);
-      });
+      useUserStoreHook()
+        .getUserPermissions()
+        .then(data => {
+          const newRoutes = formatRoutes(data.menu_permissions);
+          handleAsyncRoutes(newRoutes);
+          resolve(router);
+        });
     });
   }
 }
@@ -391,8 +401,39 @@ function getTopMenu(tag = false): menuType {
   const topMenu = handleTopMenu(
     usePermissionStoreHook().wholeMenus[0]?.children[0]
   );
+
   tag && useMultiTagsStoreHook().handleTags("push", topMenu);
   return topMenu;
+}
+
+/** 将后端传来的动态路由递归格式化为规范路由数据 */
+function formatRoutes(routes: Menu[]): RouteRecordRaw[] {
+  if (!routes || !routes.length) return routes;
+  const newRoutes: RouteRecordRaw[] = [];
+
+  routes.forEach((v: Menu) => {
+    // 是否有子级
+    const hasChildren = v?.children && v.children.length;
+
+    const newRoute: RouteRecordRaw = {
+      path: v.path,
+      name: nameCamelize(v.path.replaceAll("/", "-")),
+      redirect: hasChildren ? v.children[0].path : "",
+      meta: {
+        title: v.name,
+        icon: v.icon,
+        rank: v.sort
+      }
+    };
+
+    if (hasChildren) {
+      newRoute.children = formatRoutes(v.children);
+    } else {
+      newRoute.component = v.path as never;
+    }
+    newRoutes.push(newRoute);
+  });
+  return newRoutes;
 }
 
 export {
@@ -411,5 +452,6 @@ export {
   handleAliveRoute,
   formatTwoStageRoutes,
   formatFlatteningRoutes,
-  filterNoPermissionTree
+  filterNoPermissionTree,
+  formatRoutes
 };

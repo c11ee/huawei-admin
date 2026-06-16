@@ -1,4 +1,3 @@
-// import "@/utils/sso";
 import Cookies from "js-cookie";
 import { getConfig } from "@/config";
 import NProgress from "@/utils/progress";
@@ -31,11 +30,13 @@ import {
   createRouter
 } from "vue-router";
 import {
-  type DataInfo,
   userKey,
   removeToken,
-  multipleTabsKey
+  multipleTabsKey,
+  permissionKey
 } from "@/utils/auth";
+import { UserInfo, UserPermission } from "@/api/types/user";
+import { useUserStoreHook } from "@/store/modules/user";
 
 /** 自动导入全部静态路由，无需再手动引入！匹配 src/router/modules 目录（任何嵌套级别）中具有 .ts 扩展名的所有文件，除了 remaining.ts 文件
  * 如何匹配所有文件请看：https://github.com/mrmlnc/fast-glob#basic-syntax
@@ -133,7 +134,8 @@ router.beforeEach((to: ToRouteType, _from, next) => {
       handleAliveRoute(to);
     }
   }
-  const userInfo = storageLocal().getItem<DataInfo<number>>(userKey);
+  const userInfo = storageLocal().getItem<UserInfo>(userKey);
+  const userPermission = storageLocal().getItem<UserPermission>(permissionKey);
   const externalLink = isUrl(to?.name as string);
   if (!externalLink) {
     to.matched.some(item => {
@@ -147,9 +149,13 @@ router.beforeEach((to: ToRouteType, _from, next) => {
   function toCorrectRoute() {
     whiteList.includes(to.fullPath) ? next(_from.fullPath) : next();
   }
+
   if (Cookies.get(multipleTabsKey) && userInfo) {
     // 无权限跳转403页面
-    if (to.meta?.roles && !isOneOfArray(to.meta?.roles, userInfo?.roles)) {
+    if (
+      to.meta?.roles &&
+      !isOneOfArray(to.meta?.roles, userPermission?.button_permissions ?? [])
+    ) {
       next({ path: "/error/403" });
     }
     // 开启隐藏首页后在浏览器地址栏手动输入首页welcome路由则跳转到404页面
@@ -165,11 +171,15 @@ router.beforeEach((to: ToRouteType, _from, next) => {
         toCorrectRoute();
       }
     } else {
-      // 刷新
+      // 路由数据为空 && 不是登录页 刷新路由
       if (
         usePermissionStoreHook().wholeMenus.length === 0 &&
         to.path !== "/login"
       ) {
+        // console.log("路由数据为空, 刷新路由");
+        // 更新用户信息
+        useUserStoreHook().getUserInfo();
+        // 刷新路由
         initRouter().then((router: Router) => {
           if (!useMultiTagsStoreHook().getMultiTagsCache) {
             const { path } = to;

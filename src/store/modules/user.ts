@@ -8,27 +8,25 @@ import {
   storageLocal
 } from "../utils";
 import {
-  type UserResult,
-  type RefreshTokenResult,
   getLogin,
+  getUserInfo,
+  getUserPermissions,
   refreshTokenApi
 } from "@/api/user";
 import { useMultiTagsStoreHook } from "./multiTags";
-import { type DataInfo, setToken, removeToken, userKey } from "@/utils/auth";
+import { setToken, removeToken, userKey, permissionKey } from "@/utils/auth";
+import { UserInfo, UserPermission, type TokenResult } from "@/api/types/user";
 
 export const useUserStore = defineStore("pure-user", {
   state: (): userType => ({
     // 头像
-    avatar: storageLocal().getItem<DataInfo<number>>(userKey)?.avatar ?? "",
+    avatar: storageLocal().getItem<any>(userKey)?.avatar ?? "",
     // 用户名
-    username: storageLocal().getItem<DataInfo<number>>(userKey)?.username ?? "",
+    username: storageLocal().getItem<any>(userKey)?.username ?? "",
     // 昵称
-    nickname: storageLocal().getItem<DataInfo<number>>(userKey)?.nickname ?? "",
-    // 页面级别权限
-    roles: storageLocal().getItem<DataInfo<number>>(userKey)?.roles ?? [],
+    nickname: storageLocal().getItem<any>(userKey)?.nickname ?? "",
     // 按钮级别权限
-    permissions:
-      storageLocal().getItem<DataInfo<number>>(userKey)?.permissions ?? [],
+    permissions: storageLocal().getItem<any>(userKey)?.permissions ?? [],
     // 是否勾选了登录页的免登录
     isRemembered: false,
     // 登录页的免登录存储几天，默认7天
@@ -47,10 +45,6 @@ export const useUserStore = defineStore("pure-user", {
     SET_NICKNAME(nickname: string) {
       this.nickname = nickname;
     },
-    /** 存储角色 */
-    SET_ROLES(roles: Array<string>) {
-      this.roles = roles;
-    },
     /** 存储按钮级别权限 */
     SET_PERMS(permissions: Array<string>) {
       this.permissions = permissions;
@@ -65,11 +59,12 @@ export const useUserStore = defineStore("pure-user", {
     },
     /** 登入 */
     async loginByUsername(data) {
-      return new Promise<UserResult>((resolve, reject) => {
+      return new Promise<TokenResult>((resolve, reject) => {
         getLogin(data)
           .then(data => {
-            if (data?.success) setToken(data.data);
-            resolve(data);
+            // if (data?.success) setToken(data.data);
+            setToken(data.data);
+            resolve(data.data);
           })
           .catch(error => {
             reject(error);
@@ -78,22 +73,53 @@ export const useUserStore = defineStore("pure-user", {
     },
     /** 前端登出（不调用接口） */
     logOut() {
+      this.avatar = "";
       this.username = "";
-      this.roles = [];
+      this.nickname = "";
       this.permissions = [];
       removeToken();
       useMultiTagsStoreHook().handleTags("equal", [...routerArrays]);
       resetRouter();
       router.push("/login");
     },
+    /** 获取用户信息 */
+    async getUserInfo() {
+      return new Promise<UserInfo>((resolve, reject) => {
+        getUserInfo()
+          .then(data => {
+            this.SET_AVATAR(data.data.avatar);
+            this.SET_USERNAME(data.data.username);
+            this.SET_NICKNAME(data.data.nickname);
+            storageLocal().setItem(userKey, data.data);
+            resolve(data.data);
+          })
+          .catch(error => {
+            reject(error);
+          });
+      });
+    },
+    /** 获取用户权限 */
+    async getUserPermissions() {
+      return new Promise<UserPermission>((resolve, reject) => {
+        getUserPermissions()
+          .then(data => {
+            this.SET_PERMS(data.data.button_permissions);
+            storageLocal().setItem<UserPermission>(permissionKey, data.data);
+            resolve(data.data);
+          })
+          .catch(error => {
+            reject(error);
+          });
+      });
+    },
     /** 刷新`token` */
-    async handRefreshToken(data) {
-      return new Promise<RefreshTokenResult>((resolve, reject) => {
-        refreshTokenApi(data)
+    async handRefreshToken() {
+      return new Promise<TokenResult>((resolve, reject) => {
+        refreshTokenApi()
           .then(data => {
             if (data) {
               setToken(data.data);
-              resolve(data);
+              resolve(data.data);
             }
           })
           .catch(error => {

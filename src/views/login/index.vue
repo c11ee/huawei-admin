@@ -32,13 +32,15 @@ const ruleFormRef = ref<FormInstance>();
 const { initStorage } = useLayout();
 initStorage();
 
+const { loginByUsername, getUserInfo } = useUserStoreHook();
+
 const { dataTheme, overallStyle, dataThemeChange } = useDataThemeChange();
 dataThemeChange(overallStyle.value);
 const { title } = useNav();
 
 const ruleForm = reactive({
   username: "admin",
-  password: "admin123"
+  password: "admin"
 });
 
 const onLogin = async (formEl: FormInstance | undefined) => {
@@ -46,13 +48,13 @@ const onLogin = async (formEl: FormInstance | undefined) => {
   await formEl.validate(valid => {
     if (valid) {
       loading.value = true;
-      useUserStoreHook()
-        .loginByUsername({
-          username: ruleForm.username,
-          password: ruleForm.password
-        })
-        .then(res => {
-          if (res.success) {
+      loginByUsername({
+        username: ruleForm.username,
+        password: ruleForm.password,
+        env: "web"
+      })
+        .then(() => {
+          getUserInfo().then(() => {
             // 获取后端路由
             return initRouter().then(() => {
               disabled.value = true;
@@ -63,9 +65,7 @@ const onLogin = async (formEl: FormInstance | undefined) => {
                 })
                 .finally(() => (disabled.value = false));
             });
-          } else {
-            message("登录失败", { type: "error" });
-          }
+          });
         })
         .finally(() => (loading.value = false));
     }

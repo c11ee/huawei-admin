@@ -23,6 +23,14 @@ declare global {
   };
 
   /**
+   * 接口类型
+   */
+  interface ApiResponse<T> {
+    code: 0 | 200 | 401 | 403 | 404 | 500;
+    data: T;
+  }
+
+  /**
    * Window 的类型提示
    */
   interface Window {
