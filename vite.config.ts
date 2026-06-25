@@ -26,7 +26,8 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
       // 本地跨域代理 https://cn.vitejs.dev/config/server-options.html#server-proxy
       proxy: {
         "/apiProxy": {
-          target: "http://qa7e652a.natappfree.cc",
+          // target: "https://fuck-world.loca.lt",
+          target: "http://127.0.0.1:8000",
           changeOrigin: true,
           secure: false,
           rewrite: path => path.replace(/^\/apiProxy/, "")

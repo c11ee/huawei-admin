@@ -1,3 +1,4 @@
+import { UserInfo } from "@/api/types/user";
 import type { RouteRecordName } from "vue-router";
 
 export type cacheType = {
@@ -40,6 +41,7 @@ export type userType = {
   avatar?: string;
   username?: string;
   nickname?: string;
+  userInfo?: UserInfo;
   permissions?: Array<string>;
   isRemembered?: boolean;
   loginDay?: number;

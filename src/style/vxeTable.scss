@@ -1,0 +1,29 @@
+.vxe-grid {
+  .col--expand .vxe-cell--wrapper {
+    justify-content: center;
+  }
+
+  .col--checkbox {
+    .vxe-checkbox--label {
+      display: none;
+    }
+    .vxe-cell--checkbox {
+      --vxe-ui-font-primary-color: var(--el-color-primary);
+      --vxe-ui-input-border-color: #848a97;
+      .vxe-checkbox--icon {
+        font-size: 15px;
+        font-weight: 400;
+      }
+    }
+  }
+  .vxe-table--body-wrapper {
+    .vxe-body--column {
+      background-image:
+        none,
+        linear-gradient(
+          var(--vxe-ui-table-border-color),
+          var(--vxe-ui-table-border-color)
+        );
+    }
+  }
+}

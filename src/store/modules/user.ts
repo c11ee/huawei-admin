@@ -27,6 +27,8 @@ export const useUserStore = defineStore("pure-user", {
     nickname: storageLocal().getItem<any>(userKey)?.nickname ?? "",
     // 按钮级别权限
     permissions: storageLocal().getItem<any>(userKey)?.permissions ?? [],
+    // 用户信息 完整
+    userInfo: storageLocal().getItem<any>(userKey) ?? ({} as UserInfo),
     // 是否勾选了登录页的免登录
     isRemembered: false,
     // 登录页的免登录存储几天，默认7天
@@ -52,6 +54,10 @@ export const useUserStore = defineStore("pure-user", {
     /** 存储是否勾选了登录页的免登录 */
     SET_ISREMEMBERED(bool: boolean) {
       this.isRemembered = bool;
+    },
+    /** 存储用户信息所有字段 */
+    SET_USERINFO(userInfo: UserInfo) {
+      this.userInfo = userInfo;
     },
     /** 设置登录页的免登录存储几天 */
     SET_LOGINDAY(value: number) {

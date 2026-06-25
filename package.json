@@ -70,7 +70,8 @@
     "vue": "^3.5.22",
     "vue-router": "^4.6.3",
     "vue-tippy": "^6.7.1",
-    "vue-types": "^6.0.0"
+    "vue-types": "^6.0.0",
+    "vxe-table": "^4.19.17"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
@@ -123,6 +124,7 @@
     "vite-plugin-remove-console": "^2.2.0",
     "vite-plugin-router-warn": "^1.0.0",
     "vite-svg-loader": "^5.1.0",
+    "vue-demi": "^0.14.10",
     "vue-eslint-parser": "^10.2.0",
     "vue-tsc": "^3.1.2"
   },

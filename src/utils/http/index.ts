@@ -85,6 +85,8 @@ class PureHttp {
           ? config
           : new Promise(resolve => {
               const data = getToken();
+              console.log("token", data);
+
               if (data) {
                 const now = Math.floor(Date.now() / 1000);
                 // 是否过期
