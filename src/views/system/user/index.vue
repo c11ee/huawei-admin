@@ -61,7 +61,6 @@
 import { ref, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 import XVirtualTable from "@/components/XVirtualTable/index.vue";
-import { VxeGridPropTypes } from "vxe-table";
 
 const tableRef = ref<any>(null);
 const loading = ref(false);
@@ -92,7 +91,7 @@ const generateMockData = () => {
 };
 
 // 严谨全面的多类型多级列排布配置
-const columnsConfig = ref<VxeGridPropTypes.Column[]>([
+const columnsConfig = ref<Column[]>([
   {
     field: "checkbox",
     type: "checkbox",

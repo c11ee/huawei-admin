@@ -164,6 +164,11 @@ interface DialogOptions extends DialogProps {
   popconfirm?: Popconfirm;
   /** 点击确定按钮后是否开启 `loading` 加载动画 */
   sureBtnLoading?: boolean;
+  /** 内容区组件的 `ref` */
+  formComponent?: {
+    /** 获取表单数据的方法 */
+    getFormData: () => Promise<any>;
+  };
   /**
    * @description 自定义对话框标题的内容渲染器
    * @see {@link https://element-plus.org/zh-CN/component/dialog.html#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%A4%B4%E9%83%A8}

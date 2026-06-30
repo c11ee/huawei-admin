@@ -31,8 +31,6 @@ export interface Menu {
   /** 1菜单 2按钮 */
   type: 1 | 2;
   sort: number;
-  /** 是否需要权限控制 */
-  is_auth: 0 | 1;
   remark: string;
   parent_id: number;
   created_at: string;

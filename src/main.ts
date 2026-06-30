@@ -8,6 +8,7 @@ import { createApp, type Directive } from "vue";
 import { useElementPlus } from "@/plugins/elementPlus";
 import { useVxeTable } from "@/plugins/vxeTable";
 import { injectResponsiveStorage } from "@/utils/responsive";
+import "@/plugins/console";
 
 import Table from "@pureadmin/table";
 // import PureDescriptions from "@pureadmin/descriptions";
@@ -52,20 +53,6 @@ import "tippy.js/dist/tippy.css";
 import "tippy.js/themes/light.css";
 import VueTippy from "vue-tippy";
 app.use(VueTippy);
-
-const originalWarn = console.warn;
-console.warn = (...args: string[]) => {
-  // 如果警告信息里包含 "No match found for location"，直接拦截，不打印
-  if (
-    typeof args[0] === "string" &&
-    args[0].includes("No match found for location")
-  ) {
-    // 在获取动态路由前就已经提示了，这里直接拦截，不打印警告
-    return;
-  }
-  // 其他正常的警告依然允许打印
-  originalWarn(...args);
-};
 
 getPlatformConfig(app).then(async config => {
   setupStore(app);

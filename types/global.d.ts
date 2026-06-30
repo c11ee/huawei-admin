@@ -1,5 +1,6 @@
 import type { ECharts } from "echarts";
 import type { TableColumns } from "@pureadmin/table";
+import { VxeGridPropTypes } from "vxe-table";
 
 /**
  * 全局类型声明，无需引入直接在 `.vue` 、`.ts` 、`.tsx` 文件使用即可获得类型提示
@@ -28,6 +29,7 @@ declare global {
   interface ApiResponse<T> {
     code: 0 | 200 | 401 | 403 | 404 | 500;
     data: T;
+    msg: string;
   }
 
   /**
@@ -198,4 +200,15 @@ declare global {
       touched?: boolean;
     };
   }
+
+  type Column = VxeGridPropTypes.Column & {
+    params?: {
+      /** 是否开启本地筛选 */
+      localFilter?: boolean;
+      /** 本地筛选值对应label */
+      filterConfig?: Record<string, string>;
+      /** 不拖动, 不改列宽, 不设置是否显示 */
+      noSetColumn?: boolean;
+    };
+  };
 }

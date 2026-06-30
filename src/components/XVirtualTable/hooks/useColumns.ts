@@ -3,9 +3,9 @@ import { useUserStoreHook } from "@/store/modules/user";
 import { cloneDeep } from "@pureadmin/utils";
 import { computed, ref, Ref } from "vue";
 import { useRoute } from "vue-router";
-import { VxeGridEvents, VxeGridInstance, VxeGridPropTypes } from "vxe-table";
+import { VxeGridEvents, VxeGridInstance } from "vxe-table";
 
-type Columns = VxeGridPropTypes.Column[];
+type Columns = Column[];
 
 export function useColumns(
   initialColumns: Columns,
@@ -135,7 +135,9 @@ export function useColumns(
     if (!remoteColumns || remoteColumns.length === 0) return localColumns;
 
     // 1. 将本地最新列转化为 Map，以 field 为 key，方便快速 O(1) 查找
-    const localMap = new Map(localColumns.map(col => [col.field, col]));
+    const localMap = new Map(
+      localColumns.map((col, index) => [col.field, { col, index }])
+    );
     const mergedColumns: Columns = [];
 
     // 2. 按照后端保存的【顺序】进行遍历映射
@@ -143,7 +145,7 @@ export function useColumns(
       if (!remoteCol.field) return;
 
       // 检查这个 field 在最新代码里还存不存在
-      const localCol = localMap.get(remoteCol.field);
+      const localCol = localMap.get(remoteCol.field)?.col;
 
       if (localCol) {
         // 基础合并对象：继承本地最新的一切，覆盖显隐和宽度
@@ -172,9 +174,10 @@ export function useColumns(
       }
     });
 
-    // 3. 【新列处理】把本地代码里新加的、后端没记录过的列，直接追加到表格末尾
+    // 3. 【新列处理】把本地代码里新加的、后端没记录过的列，插入到正确位置
     localMap.forEach(newLocalCol => {
-      mergedColumns.push(newLocalCol);
+      const { col, index } = newLocalCol;
+      mergedColumns.splice(index, 0, col);
     });
 
     return mergedColumns;

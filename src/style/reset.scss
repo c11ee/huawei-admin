@@ -234,7 +234,9 @@ a:hover {
   cursor: pointer;
 }
 
-div:focus {
+div:focus,
+i:focus,
+svg:focus {
   outline: none;
 }
 

@@ -12,6 +12,7 @@ import type {
 import { stringify } from "qs";
 import { getToken, formatToken } from "@/utils/auth";
 import { useUserStoreHook } from "@/store/modules/user";
+import { ElMessage } from "element-plus";
 
 // 相关配置请参考：www.axios-js.com/zh-cn/docs/#axios-request-config-1
 const defaultConfig: AxiosRequestConfig = {
@@ -85,7 +86,6 @@ class PureHttp {
           ? config
           : new Promise(resolve => {
               const data = getToken();
-              console.log("token", data);
 
               if (data) {
                 const now = Math.floor(Date.now() / 1000);
@@ -145,12 +145,16 @@ class PureHttp {
         }
 
         switch (data.code) {
+          case 200:
+            return data;
           case 401:
             useUserStoreHook().logOut();
-            break;
+            return Promise.reject(data);
+          default:
+            // 其他错误码 (没权限, 接口提示错误)
+            ElMessage.error(data.msg);
+            return Promise.reject(data);
         }
-
-        return data;
       },
       (error: PureHttpError) => {
         const $error = error;

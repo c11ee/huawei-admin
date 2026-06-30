@@ -203,6 +203,7 @@ function handleAsyncRoutes(routeList: RouteRecordRaw[] | null) {
 /** 初始化路由（`new Promise` 写法防止在异步请求中造成无限循环）*/
 function initRouter() {
   if (getConfig()?.CachingAsyncRoutes) {
+    // TODO: 如果使用本地缓存路由时, 权限页面刷新时, 会从缓存中获取路由, 而不是从后端获取路由
     // 开启动态路由缓存本地localStorage
     const key = "async-routes";
     const asyncRouteList = storageLocal().getItem(key) as any;

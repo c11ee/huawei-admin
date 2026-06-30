@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, useSlots, toRef, onMounted } from "vue";
-import type {
-  VxeGridProps,
-  VxeGridInstance,
-  VxeGridPropTypes
-} from "vxe-table";
+import type { VxeGridProps, VxeGridInstance } from "vxe-table";
 import { useSelection } from "./hooks/useSelection";
 import { useColumns } from "./hooks/useColumns";
 import { useSort } from "./hooks/useSort";
@@ -15,23 +11,51 @@ import { Filter } from "@element-plus/icons-vue";
 
 // ─── 1. 类型定义 ───────────────────────────────────────────────────────
 interface Props {
-  columns: VxeGridPropTypes.Column[];
+  columns: Column[];
   data: any[];
   loading?: boolean;
   rowKey?: string;
   height?: number | string;
   diyKey?: string;
   showSettingHeader?: boolean;
+  /** 额外的表格配置 */
+  extraGridOptions?: VxeGridProps | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
   rowKey: "id",
   height: 580,
-  showSettingHeader: true
+  showSettingHeader: true,
+  extraGridOptions: null
 });
 
 const emit = defineEmits(["update:selectedRows", "sort-change"]);
+
+/**
+ * 静态高性能 Grid 骨架配置
+ */
+const gridOptions = computed<VxeGridProps>(() => ({
+  id: props.rowKey,
+  align: "center",
+  border: true,
+  height: "auto",
+  loading: props.loading,
+  autoResize: true,
+  rowConfig: { keyField: props.rowKey, isHover: true },
+  tooltipConfig: {},
+  cellConfig: { height: 48 },
+  scrollY: { enabled: true },
+  columnConfig: { resizable: true, drag: true, useKey: true },
+  columnDragConfig: {
+    visibleMethod: ({ column }) => !column.params?.noSetColumn
+  },
+  virtualYConfig: { enabled: true, gt: 30 },
+  virtualXConfig: { enabled: true, gt: 12 },
+  checkboxConfig: { reserve: true, trigger: "cell" },
+  sortConfig: { remote: true, trigger: "cell" },
+  ...(props.extraGridOptions || {})
+}));
 
 // ─── 2. 状态与 Hooks 注入 ────────────────────────────────────────────────
 const gridRef = ref<VxeGridInstance | null>(null);
@@ -68,10 +92,11 @@ const {
   filterSelectedValues,
   localFilterColumns,
   filterMap,
+  isConfigured,
   handleFilterIconClick,
   applyLocalFilter,
   resetLocalFilter
-} = useFilter(toRef(props, "data"), renderColumns);
+} = useFilter(toRef(props, "data"), renderColumns, gridOptions);
 
 // ─── 3. 计算属性 ───────────────────────────────────────────────────────
 
@@ -111,29 +136,6 @@ const forwardSlots = computed(() =>
   Object.keys(vueSlots).filter(name => name !== "expand-content")
 );
 
-/**
- * 静态高性能 Grid 骨架配置
- */
-const gridOptions = computed<VxeGridProps>(() => ({
-  id: props.rowKey,
-  align: "center",
-  border: true,
-  height: "100%",
-  loading: props.loading,
-  autoResize: true,
-  rowConfig: { keyField: props.rowKey, isHover: true },
-  cellConfig: { height: 48 },
-  scrollY: { enabled: true },
-  columnConfig: { resizable: true, drag: true, useKey: true },
-  columnDragConfig: {
-    visibleMethod: ({ column }) => !column.params?.noSetColumn
-  },
-  virtualYConfig: { enabled: true, gt: 30 },
-  virtualXConfig: { enabled: true, gt: 12 },
-  checkboxConfig: { reserve: true, trigger: "cell" },
-  sortConfig: { remote: true, trigger: "cell" }
-}));
-
 // ─── 4. 交互方法 ───────────────────────────────────────────────────────
 
 /**
@@ -145,10 +147,12 @@ const handleCellMouseEnter = ({ cell, column }: any) => {
   if (tooltipTimer) clearTimeout(tooltipTimer);
 
   tooltipTimer = setTimeout(() => {
-    const cellEl = cell.querySelector(".vxe-cell") as HTMLElement;
-    if (cellEl && cellEl.scrollWidth > cellEl.clientWidth) {
+    const cellEl = cell.querySelector(".vxe-cell--wrapper") as HTMLElement;
+    const labelEl = cellEl.querySelector(".vxe-cell--label") as HTMLElement;
+
+    if (labelEl && labelEl.offsetWidth > cellEl.offsetWidth) {
       tooltipTriggerRef.value = cellEl;
-      tooltipContent.value = cellEl.innerText;
+      tooltipContent.value = labelEl.innerText;
       tooltipVisible.value = true;
     }
   }, 50);
@@ -171,7 +175,10 @@ defineExpose({
   setCheckboxRow,
   clearCheckboxRow,
   selectedRows,
-  selectedCount
+  selectedCount,
+  getGridRef: () => {
+    return gridRef.value;
+  }
 });
 </script>
 
@@ -200,7 +207,7 @@ defineExpose({
       </template>
 
       <template #expand-header>
-        <div class="vxe-table--expanded" @click="toggleAllExpand">
+        <div class="vxe-table--expanded select-none" @click="toggleAllExpand">
           <span class="vxe-table--expand-btn">
             <i
               class="vxe-table-icon-arrow-right"
@@ -278,7 +285,9 @@ defineExpose({
               :key="item"
               class="filter-checkbox-item"
             >
-              <el-checkbox :value="item">{{ item }}</el-checkbox>
+              <el-checkbox :value="item">{{
+                isConfigured(item, 0)
+              }}</el-checkbox>
             </div>
           </el-checkbox-group>
         </el-scrollbar>
@@ -309,7 +318,7 @@ defineExpose({
 }
 
 /* 核心文本单行截断（保证 scrollWidth 判定生效的绝对先决条件） */
-:deep(.vxe-body--column .vxe-cell) {
+:deep(.vxe-body--column .vxe-cell .vxe-cell--wrapper) {
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;

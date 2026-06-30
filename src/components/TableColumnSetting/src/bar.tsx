@@ -9,7 +9,6 @@ import {
   watch
 } from "vue";
 import { cloneDeep, getKeyList } from "@pureadmin/utils";
-import { VxeGridPropTypes } from "vxe-table";
 
 import DragIcon from "@/assets/table-bar/drag.svg?component";
 import SettingIcon from "@/assets/table-bar/settings.svg?component";
@@ -17,11 +16,11 @@ import SettingIcon from "@/assets/table-bar/settings.svg?component";
 const props = {
   /** 需要展示的列 */
   columns: {
-    type: Array as PropType<VxeGridPropTypes.Column[]>,
+    type: Array as PropType<Column[]>,
     default: () => []
   },
   defaultColumns: {
-    type: Array as PropType<VxeGridPropTypes.Column[]>,
+    type: Array as PropType<Column[]>,
     default: () => []
   },
   tableKey: {
@@ -40,12 +39,10 @@ export default defineComponent({
     const instance = getCurrentInstance()!;
 
     // 内部维护的响应式列数据
-    const dynamicColumns = ref<VxeGridPropTypes.Column[]>(
-      cloneDeep(props?.columns)
-    );
+    const dynamicColumns = ref<Column[]>(cloneDeep(props?.columns));
 
     // 所有列的 title 集合（用于控制全选）
-    let checkColumnList: VxeGridPropTypes.Column[] = cloneDeep(props?.columns);
+    let checkColumnList: Column[] = cloneDeep(props?.columns);
 
     // 当前勾选（显示）的列 title 集合
     const checkedColumns = ref(
