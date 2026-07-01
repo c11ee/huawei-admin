@@ -32,6 +32,18 @@ declare global {
     msg: string;
   }
 
+  type ListParams<T> = {
+    page?: number;
+    limit?: number;
+  } & T;
+
+  /** 包含分页信息的data数据 */
+  interface PageData<T> {
+    data: T;
+    page: number;
+    total: number;
+  }
+
   /**
    * Window 的类型提示
    */

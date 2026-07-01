@@ -1,3 +1,11 @@
+.grow .el-card {
+  --el-card-padding: 16px;
+}
+
+.pager-card .el-card__body {
+  padding-bottom: 8px;
+}
+
 .el-form-item__label {
   font-weight: 700;
 }

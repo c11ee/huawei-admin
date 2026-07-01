@@ -1,3 +1,4 @@
+import { isNumber } from "@pureadmin/utils";
 import { PopoverInstance } from "element-plus";
 import { computed, ref, watch, Ref, ComputedRef } from "vue";
 import { VxeGridProps } from "vxe-table";
@@ -51,7 +52,9 @@ export function useFilter(
     if (typeof value !== "string") return value;
     const config = value.split("|");
     const configuredValue = config.length > 1 ? config[index] : value;
-    return Number(configuredValue) || configuredValue;
+    const v = Number(configuredValue);
+
+    return !isNaN(v) ? v : configuredValue;
   };
 
   /**

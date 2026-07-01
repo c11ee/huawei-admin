@@ -8,6 +8,7 @@ import { useFilter } from "./hooks/useFilter";
 import { TableColumnSetting } from "../TableColumnSetting";
 import { isUnDef } from "@pureadmin/utils";
 import { Filter } from "@element-plus/icons-vue";
+import { usePagination } from "./hooks/usePagination";
 
 // ─── 1. 类型定义 ───────────────────────────────────────────────────────
 interface Props {
@@ -20,6 +21,12 @@ interface Props {
   showSettingHeader?: boolean;
   /** 额外的表格配置 */
   extraGridOptions?: VxeGridProps | null;
+  /** 分页配置 */
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+  };
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -97,6 +104,7 @@ const {
   applyLocalFilter,
   resetLocalFilter
 } = useFilter(toRef(props, "data"), renderColumns, gridOptions);
+const { wrapRef, paginationBind } = usePagination(props.pagination);
 
 // ─── 3. 计算属性 ───────────────────────────────────────────────────────
 
@@ -111,8 +119,9 @@ const finalColumns = computed(() => {
     // A. 注入本地过滤插槽
     if (item.params?.localFilter && item.field) {
       item.slots = { ...item.slots, header: `filter-header-${item.field}` };
-      item.filterMethod = ({ value, row, column }: any) =>
-        String(row[column.field]) === String(value);
+      item.filterMethod = ({ value, row, column }: any) => {
+        return String(row[column.field]) === String(value);
+      };
     }
     // B. 末尾列追加操作齿轮
     if (props.showSettingHeader && index === renderColumns.value.length - 1) {
@@ -166,6 +175,14 @@ const handleCellMouseLeave = () => {
 const toggleAllExpand = () => {
   isAllExpanded.value = !isAllExpanded.value;
   gridRef.value?.setAllRowExpand(isAllExpanded.value);
+};
+
+const handleSizeChange = (val: number) => {
+  // props.pagination.limit = val;
+};
+
+const handleCurrentChange = (val: number) => {
+  // props.pagination.page = val;
 };
 
 // ─── 5. 生命周期 & 暴露 API ───────────────────────────────────────────
@@ -247,6 +264,19 @@ defineExpose({
             :columns="finalColumns"
             :defaultColumns="props.columns"
             @columns-change="handleColumnsChange"
+          />
+        </div>
+      </template>
+
+      <template #pager v-if="props.pagination">
+        <div class="flex justify-between mt-2" ref="wrapRef">
+          <slot name="pager-left">
+            <div></div>
+          </slot>
+          <el-pagination
+            v-bind="paginationBind"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
           />
         </div>
       </template>
