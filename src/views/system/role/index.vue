@@ -8,7 +8,7 @@
               v-model="listParams.keyword"
               placeholder="请输入角色名称 / 描述"
               clearable
-              class="!w-64"
+              class="w-64!"
               :prefix-icon="Search"
               @keyup.enter="handleSearch"
               @clear="handleSearch"
@@ -27,7 +27,7 @@
         <template #header>
           <div class="card-header flex items-center justify-between">
             <span class="text-lg font-bold">角色列表</span>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center">
               <el-button type="primary" :icon="Plus" @click="handleCreate"
                 >添加角色</el-button
               >
@@ -53,6 +53,7 @@
               :columns="COLUMNS_CONFIG"
               :data="roleList"
               :pagination="listParams"
+              @pagination-change="handlePaginationChange"
             >
               <template #status-default="{ row }">
                 <el-switch
@@ -94,6 +95,7 @@
       </el-card>
     </div>
 
+    <!-- 权限窗口 -->
     <el-card
       v-show="isPermissionDialogShow"
       shadow="never"
@@ -130,7 +132,7 @@
           @input="onQueryChanged"
         />
 
-        <div class="flex-1 min-h-0">
+        <div class="flex-1 min-h-0" v-loading="permissionLoading">
           <el-tree-v2
             ref="treeRef"
             show-checkbox
@@ -139,7 +141,7 @@
             :height="treeHeight"
             :check-strictly="true"
             :filter-method="filterMethod"
-            :loading="permissionLoading"
+            :empty-text="permissionLoading ? '加载中...' : '暂无权限'"
             :default-expanded-keys="defaultExpandedKeys"
             @check-change="handleCheckChange"
           >
@@ -439,11 +441,11 @@ const handleDeleteConfirm = async (row: { id: number }) => {
 };
 
 const handlePermission = async (row: Role) => {
+  isPermissionDialogShow.value = true;
   if (!permissionTree.value.length) {
     await fetchPermissions();
   }
 
-  isPermissionDialogShow.value = true;
   curRow.value = row;
   treeSearchValue.value = "";
 
@@ -486,6 +488,11 @@ const handleSave = async () => {
     console.error("保存权限失败:", error);
     ElMessage.error("保存权限失败");
   }
+};
+
+const handlePaginationChange = (pagination: typeof listParams.value) => {
+  listParams.value = { ...listParams.value, ...pagination };
+  fetchRoles();
 };
 
 const onQueryChanged = (query: string) => treeRef.value?.filter(query);

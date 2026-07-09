@@ -1,11 +1,13 @@
 import { useElementSize } from "@vueuse/core";
-import { computed, ref } from "vue";
+import { computed, Ref, ref } from "vue";
 
-export const usePagination = (paginationProps: {
-  total: number;
-  page: number;
-  limit: number;
-}) => {
+export const usePagination = (
+  paginationProps: Ref<{
+    total: number;
+    page: number;
+    limit: number;
+  }>
+) => {
   const wrapRef = ref<HTMLDivElement>(null);
   const { width } = useElementSize(wrapRef);
 
@@ -13,9 +15,9 @@ export const usePagination = (paginationProps: {
     const w = width.value;
 
     return {
-      total: paginationProps.total,
-      currentPage: paginationProps.page,
-      pageSize: paginationProps.limit,
+      total: paginationProps.value.total,
+      currentPage: paginationProps.value.page,
+      pageSize: paginationProps.value.limit,
       // size: "small" as const,
       background: true,
       pageSizes: [20, 100, 200, 500, 1000],

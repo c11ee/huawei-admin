@@ -37,7 +37,18 @@ const props = withDefaults(defineProps<Props>(), {
   extraGridOptions: null
 });
 
-const emit = defineEmits(["update:selectedRows", "sort-change"]);
+const emit = defineEmits<{
+  (e: "update:selectedRows", selectedRows: any[]): void;
+  (
+    e: "sort-change",
+    sort: {
+      field: string;
+      order: string;
+      orderBy: string;
+    }
+  ): void;
+  (e: "pagination-change", pagination: Props["pagination"]): void;
+}>();
 
 /**
  * 静态高性能 Grid 骨架配置
@@ -104,7 +115,7 @@ const {
   applyLocalFilter,
   resetLocalFilter
 } = useFilter(toRef(props, "data"), renderColumns, gridOptions);
-const { wrapRef, paginationBind } = usePagination(props.pagination);
+const { wrapRef, paginationBind } = usePagination(toRef(props, "pagination"));
 
 // ─── 3. 计算属性 ───────────────────────────────────────────────────────
 
@@ -178,11 +189,11 @@ const toggleAllExpand = () => {
 };
 
 const handleSizeChange = (val: number) => {
-  // props.pagination.limit = val;
+  emit("pagination-change", { ...props.pagination, limit: val, page: 1 });
 };
 
 const handleCurrentChange = (val: number) => {
-  // props.pagination.page = val;
+  emit("pagination-change", { ...props.pagination, page: val });
 };
 
 // ─── 5. 生命周期 & 暴露 API ───────────────────────────────────────────
