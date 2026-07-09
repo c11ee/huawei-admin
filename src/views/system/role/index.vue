@@ -2,7 +2,12 @@
   <div class="h-full w-full flex gap-x-3">
     <div class="flex-1 h-full flex flex-col gap-y-3 min-w-0">
       <el-card shadow="never" class="shrink-0">
-        <el-form :inline="true" :model="listParams" class="demo-form-inline">
+        <el-form
+          :inline="true"
+          :model="listParams"
+          class="demo-form-inline"
+          @submit.native.prevent
+        >
           <el-form-item class="mb-0!">
             <el-input
               v-model="listParams.keyword"
