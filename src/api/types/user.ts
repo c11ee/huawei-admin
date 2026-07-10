@@ -9,13 +9,16 @@ export type TokenResult = {
 
 export interface User {
   id: number;
+  name: string;
   username: string;
   nickname: string;
   phone: string;
+  email: string;
   avatar: string;
   status: 0 | 1;
   role_ids: string;
   role_names: string;
+  password?: string;
   created_at: string;
   updated_at: string;
   created_at_ts: number;

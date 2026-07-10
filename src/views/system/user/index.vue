@@ -1,204 +1,284 @@
 <template>
-  <div>
-    <el-card header="XVirtualTable 企业级虚拟表格演示（数千条数据秒开不卡顿）">
-      <div
-        style="
-          margin-bottom: 16px;
-          display: flex;
-          gap: 12px;
-          align-items: center;
-        "
-      >
-        <el-button
-          type="danger"
-          :disabled="!selectedRows.length"
-          @click="batchDelete"
+  <div class="h-full w-full flex gap-x-3">
+    <div class="flex-1 h-full flex flex-col gap-y-3 min-w-0">
+      <el-card shadow="never" class="shrink-0">
+        <el-form
+          :inline="true"
+          :model="listParams"
+          class="demo-form-inline"
+          @submit.native.prevent
         >
-          批量删除 (已选 {{ selectedCount }} 项)
-        </el-button>
-        <el-button @click="selectFirstFive">勾选前5行(控制反转)</el-button>
-        <el-button @click="clearAllSelections">清除所有勾选</el-button>
-      </div>
-
-      <div class="h-125">
-        {{ selectedRows }}
-        <XVirtualTable
-          ref="tableRef"
-          v-model:selectedRows="selectedRows"
-          :columns="columnsConfig"
-          :data="mockData"
-          :loading="loading"
-          @sort-change="handleServerSort"
-          @switch-change="handleStatusSwitch"
-        >
-          <template #expand-content="{ row }">
-            <p style="margin: 0; color: #666">
-              <strong>详细日志描述：</strong>
-              {{ row.detailDesc || "暂无更多系统级拓展详情" }}
-            </p>
-          </template>
-
-          <template #level-tag="{ row }">
-            <el-tag
-              :type="
-                row.level === 'High'
-                  ? 'danger'
-                  : row.level === 'Medium'
-                    ? 'warning'
-                    : 'success'
-              "
+          <el-form-item class="mb-0!">
+            <el-input
+              v-model="listParams.keyword"
+              placeholder="请输入昵称"
+              clearable
+              class="w-64!"
+              :prefix-icon="Search"
+              @keyup.enter="handleSearch"
+              @clear="handleSearch"
+            />
+          </el-form-item>
+          <el-form-item class="mb-0!">
+            <el-button type="primary" :icon="Search" @click="handleSearch"
+              >查询</el-button
             >
-              {{ row.level }}
-            </el-tag>
-          </template>
-        </XVirtualTable>
-      </div>
-    </el-card>
+            <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+
+      <el-card shadow="never" class="flex-1 flex flex-col min-h-0 pager-card">
+        <template #header>
+          <div class="card-header flex items-center justify-between">
+            <span class="text-lg font-bold">用户列表</span>
+            <div class="flex items-center">
+              <el-button type="primary" :icon="Plus" @click="handleCreate"
+                >添加用户</el-button
+              >
+              <el-button
+                :icon="Refresh"
+                :loading="loading"
+                @click="fetchUsers()"
+                >刷新</el-button
+              >
+            </div>
+          </div>
+        </template>
+
+        <div
+          v-loading="loading"
+          ref="contentRef"
+          class="h-full min-h-0 overflow-hidden"
+        >
+          <XPopperProxy @confirm="handleDeleteConfirm">
+            <XVirtualTable
+              ref="tableRef"
+              row-key="id"
+              :columns="COLUMNS_CONFIG"
+              :data="userList"
+              :pagination="listParams"
+              @pagination-change="handlePaginationChange"
+            >
+              <template #avatar-default="{ row }">
+                <el-avatar
+                  :size="32"
+                  :src="row.avatar || undefined"
+                  class="shrink-0"
+                >
+                  {{ row.name?.charAt(0) || row.username?.charAt(0) || "?" }}
+                </el-avatar>
+              </template>
+
+              <template #status-default="{ row }">
+                <el-switch
+                  :model-value="row.status"
+                  :active-value="1"
+                  :inactive-value="0"
+                  inline-prompt
+                  :loading="loadingStatusMap[row.id]"
+                  active-text="启用"
+                  inactive-text="禁用"
+                  @change="handleStatusChange($event as 0 | 1, row)"
+                />
+              </template>
+
+              <template #operation-default="{ row }">
+                <el-button link type="primary" @click="handleEdit(row)"
+                  >编辑</el-button
+                >
+                <el-divider direction="vertical" />
+                <el-button
+                  link
+                  type="danger"
+                  data-proxy-popover
+                  data-popover-title="确定删除此用户吗？"
+                  :data-row-data="JSON.stringify({ id: row.id })"
+                >
+                  删除
+                </el-button>
+              </template>
+            </XVirtualTable>
+          </XPopperProxy>
+        </div>
+      </el-card>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, h } from "vue";
 import { ElMessage } from "element-plus";
+import { Refresh, Plus, Search } from "@element-plus/icons-vue";
+import {
+  getUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  type User,
+  updateUserStatus
+} from "@/api/user";
 import XVirtualTable from "@/components/XVirtualTable/index.vue";
+import XPopperProxy from "@/components/XPopperProxy/index.vue";
+import { addDialog, closeDialog } from "@/components/ReDialog";
+import UserForm from "./UserForm.vue";
 
-const tableRef = ref<any>(null);
-const loading = ref(false);
-const selectedRows = ref<any[]>([]);
-const selectedCount = ref(0);
-const mockData = ref<any[]>([]);
+defineOptions({ name: "SystemUsers" });
 
-// 模拟生产级数千条数据流
-const generateMockData = () => {
-  loading.value = true;
-  const list: any[] = [];
-  const levels = ["High", "Medium", "Low"];
-  const categories = ["Finance", "Security", "Operations", "Development"];
-
-  for (let i = 1; i <= 3500; i++) {
-    list.push({
-      id: `ROW_ID_${i}`,
-      taskName: `自动化测试分析任务集群序列号 - #${i}`,
-      category: categories[i % categories.length],
-      level: levels[i % levels.length],
-      status: i % 3 !== 0,
-      creator: `Admin-User-${i}`,
-      detailDesc: `此日志是由系统自动在核心线程 [Pool-${i}] 中捕获并持久化存储。涉及的高级参数包括虚拟节点寻址和微服务调用拓扑追踪，数据量级庞大。`
-    });
-  }
-  mockData.value = list;
-  loading.value = false;
-};
-
-// 严谨全面的多类型多级列排布配置
-const columnsConfig = ref<Column[]>([
+// --- 静态常量配置 ---
+const COLUMNS_CONFIG: any[] = [
+  { field: "nickname", title: "昵称", minWidth: 120 },
+  { field: "username", title: "用户名", minWidth: 120 },
   {
-    field: "checkbox",
-    type: "checkbox",
-    width: 60,
-    title: "选择",
-    params: {
-      noSetColumn: true
-    }
-  }, // 多选框（自带跨页记忆）
-  {
-    field: "expand",
-    type: "expand",
-    width: 50,
-    title: "展开",
-    params: {
-      noSetColumn: true
-    },
-    slots: { content: "expand-content" }
-  }, // 展开行
-  {
-    field: "taskName",
-    width: 200,
-    title: "核心任务属性分组",
-    align: "center",
-    children: [
-      { field: "id", title: "任务ID", width: 120, sortable: true },
-      {
-        field: "detailDesc",
-        title: "详细日志描述",
-        minWidth: 260
-      }
-    ]
+    field: "avatar",
+    title: "头像",
+    width: 70,
+    slots: { default: "avatar-default" }
   },
-  {
-    field: "category",
-    title: "所属范畴",
-    width: 140,
-    params: {
-      localFilter: true
-    }
-  },
-  {
-    field: "level",
-    title: "优先级级别",
-    width: 130,
-    params: {
-      localFilter: true
-    },
-    slots: { default: "level-tag" } // 外部自定义 Tag 插槽
-  },
+  { field: "phone", title: "手机号", width: 130 },
+  { field: "email", title: "邮箱", width: 150 },
+  { field: "role_names", title: "角色", minWidth: 150 },
   {
     field: "status",
-    title: "服务激活状态",
-    width: 130
-  },
-  {
-    field: "creator",
-    title: "创建人",
-    width: 140,
+    title: "状态",
+    width: 80,
     params: {
-      noSetColumn: true
+      localFilter: true,
+      filterConfig: { 0: "禁用", 1: "启用" }
+    },
+    slots: { default: "status-default" }
+  },
+  { field: "created_at", title: "创建时间", width: 180 },
+  { field: "updated_at", title: "更新时间", width: 180 },
+  {
+    field: "operation",
+    title: "操作",
+    width: 130,
+    slots: { default: "operation-default" },
+    params: { noSetColumn: true }
+  }
+];
+
+// --- 响应式状态 ---
+const loading = ref(false);
+const userList = ref<User[]>([]);
+
+const listParams = ref({
+  page: 1,
+  limit: 100,
+  total: 0,
+  keyword: ""
+});
+
+const tableRef = ref();
+const contentRef = ref<HTMLDivElement>();
+const loadingStatusMap = ref<Record<number, boolean>>({});
+
+// --- 核心业务逻辑 ---
+
+const fetchUsers = async () => {
+  loading.value = true;
+  try {
+    const res = await getUsers(listParams.value);
+    if (res.code === 200) {
+      userList.value = res.data.data;
+      listParams.value.total = res.data.total;
     }
-  }
-]);
-
-// 响应服务端排序回调
-const handleServerSort = ({ field, order, orderBy }: any) => {
-  ElMessage.info(`向后端请求排序，参数字符串 -> orderBy: "${orderBy}"`);
-  console.log("排序详细结构：", { field, order, orderBy });
-  // 真实场景下，在此处调用后端 API 刷新 mockData 即可
-};
-
-// 响应便捷式开关变化回调
-const handleStatusSwitch = async ({ row, field, value }: any) => {
-  row.__switchLoading = true; // 局部行 loading 防御
-  ElMessage.success(
-    `状态变更拦截：ID [${row.id}] 的 ${field} 字段已被修改为 -> ${value}`
-  );
-
-  // 模拟异步网路回写
-  setTimeout(() => {
-    row.__switchLoading = false;
-  }, 500);
-};
-
-// 外部控制反转示例：快速选中前 5 行
-const selectFirstFive = () => {
-  if (tableRef.value && mockData.value.length >= 5) {
-    const firstFive = mockData.value.slice(0, 5);
-    tableRef.value.setCheckboxRow(firstFive, true);
-    ElMessage.success("已通过外部接口强制批量勾选前 5 条记录");
+  } catch (error) {
+    console.error("获取用户列表失败:", error);
+  } finally {
+    loading.value = false;
   }
 };
 
-// 外部控制反转示例：一键清空
-const clearAllSelections = () => {
-  tableRef.value?.clearCheckboxRow();
-  ElMessage.warning("已清空全部页面所有勾选历史");
+const handleSearch = () => {
+  fetchUsers();
 };
 
-const batchDelete = () => {
-  ElMessage.error(
-    `触发批量删除，共涉及 ${selectedRows.value.length} 条跨页数据`
-  );
+/** 重置搜索 */
+const handleReset = () => {
+  listParams.value.keyword = "";
+  fetchUsers();
 };
 
+const handleStatusChange = async (status: 0 | 1, row: User) => {
+  try {
+    const userId = row.id;
+    loadingStatusMap.value[userId] = true;
+    const res = await updateUserStatus(userId, status);
+    loadingStatusMap.value[userId] = false;
+    if (res.code === 200) {
+      ElMessage.success(res.msg || "操作成功");
+      row.status = status;
+    }
+  } catch (error) {
+    console.error("操作失败:", error);
+  }
+};
+
+const openUserDialog = async (row?: User | null) => {
+  const isEdit = !!row;
+  addDialog({
+    title: isEdit ? "编辑用户" : "添加用户",
+    width: "550px",
+    closeOnClickModal: false,
+    sureBtnLoading: true,
+    contentRenderer: ({ options }) =>
+      h(UserForm, {
+        row,
+        ref: (el: any) => {
+          if (el) options.formComponent = el;
+        }
+      }),
+    beforeSure: async (done, { options, index, closeLoading }) => {
+      const formComponent = options.formComponent;
+      if (!formComponent) return closeLoading();
+
+      const data = await formComponent.getFormData();
+      if (!data) return closeLoading();
+
+      try {
+        const res = isEdit
+          ? await updateUser(data.id, data)
+          : await createUser(data);
+        if (res.code === 200) {
+          closeDialog(options, index);
+          ElMessage.success(res.msg || "操作成功");
+          fetchUsers();
+        } else {
+          ElMessage.error(res.msg || "操作失败");
+        }
+      } catch (error) {
+        console.error("操作失败:", error);
+      } finally {
+        closeLoading();
+      }
+    }
+  });
+};
+
+const handleCreate = () => openUserDialog(null);
+const handleEdit = (row: User) => openUserDialog(row);
+
+const handleDeleteConfirm = async (row: { id: number }) => {
+  try {
+    const res = await deleteUser(row.id);
+    if (res.code === 200) {
+      ElMessage.success("删除成功");
+      fetchUsers();
+    }
+  } catch (error) {
+    console.error("删除用户失败:", error);
+  }
+};
+
+const handlePaginationChange = (pagination: typeof listParams.value) => {
+  listParams.value = { ...listParams.value, ...pagination };
+  fetchUsers();
+};
+
+// --- 生命周期 ---
 onMounted(() => {
-  generateMockData();
+  fetchUsers();
 });
 </script>
