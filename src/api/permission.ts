@@ -1,10 +1,11 @@
 import { http } from "@/utils/http";
+import { Timestamped } from "./types/common";
 
 /** 权限类型：1=菜单/目录  2=按钮/权限点 */
 export type PermissionType = 1 | 2;
 
 /** 权限项数据结构 */
-export interface Permission {
+export type Permission = {
   id: number;
   key: string;
   name: string;
@@ -15,12 +16,8 @@ export interface Permission {
   sort: number;
   remark: string;
   parent_id: number;
-  created_at: string;
-  updated_at: string;
-  created_at_ts: number;
-  updated_at_ts: number;
   children: Permission[];
-}
+} & Timestamped;
 
 /** 获取权限列表 */
 export const getPermissions = () => {

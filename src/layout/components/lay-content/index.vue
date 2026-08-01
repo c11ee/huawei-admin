@@ -6,6 +6,7 @@ import { useGlobal, isNumber } from "@pureadmin/utils";
 import BackTopIcon from "@/assets/svg/back_top.svg?component";
 import { h, computed, Transition, defineComponent } from "vue";
 import { usePermissionStoreHook } from "@/store/modules/permission";
+import noTransitionRoutes from "@/config/noTransitionRoutes";
 
 const props = defineProps({
   fixedHeader: Boolean
@@ -80,10 +81,18 @@ const transitionMain = defineComponent({
     }
   },
   render() {
-    const transitionName =
-      transitions.value(this.route)?.name || "fade-transform";
-    const enterTransition = transitions.value(this.route)?.enterTransition;
-    const leaveTransition = transitions.value(this.route)?.leaveTransition;
+    const transition = transitions.value(this.route);
+    // 禁用路由动画：meta.transition 设为 false / { disabled: true } / 路径在 noTransitionRoutes 名单中
+    if (
+      transition === false ||
+      transition?.disabled ||
+      noTransitionRoutes.includes(this.route.path)
+    ) {
+      return this.$slots.default();
+    }
+    const transitionName = transition?.name || "fade-transform";
+    const enterTransition = transition?.enterTransition;
+    const leaveTransition = transition?.leaveTransition;
     return h(
       Transition,
       {

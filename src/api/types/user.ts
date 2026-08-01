@@ -1,3 +1,5 @@
+import { Timestamped } from "./common";
+
 export type TokenResult = {
   /** token */
   access_token: string;
@@ -7,7 +9,7 @@ export type TokenResult = {
   expires_at: number;
 };
 
-export interface User {
+export type User = {
   id: number;
   name: string;
   username: string;
@@ -19,13 +21,9 @@ export interface User {
   role_ids: string;
   role_names: string;
   password?: string;
-  created_at: string;
-  updated_at: string;
-  created_at_ts: number;
-  updated_at_ts: number;
-}
+} & Timestamped;
 
-export interface Menu {
+export type Menu = {
   id: number;
   key: string;
   name: string;
@@ -36,12 +34,8 @@ export interface Menu {
   sort: number;
   remark: string;
   parent_id: number;
-  created_at: string;
-  updated_at: string;
-  created_at_ts: number;
-  updated_at_ts: number;
   children: Menu[];
-}
+} & Timestamped;
 
 export type UserInfo = User;
 

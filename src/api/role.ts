@@ -1,20 +1,17 @@
 import { http } from "@/utils/http";
+import { Timestamped } from "./types/common";
 
 /** 角色状态：0=禁用 1=启用 */
 export type RoleStatus = 0 | 1;
 
 /** 角色数据结构 */
-export interface Role {
+export type Role = {
   id: number;
   name: string;
   description: string;
   status: RoleStatus;
   permission_ids: number[];
-  created_at: string;
-  updated_at: string;
-  created_at_ts: number;
-  updated_at_ts: number;
-}
+} & Timestamped;
 
 /** 获取角色列表（keyword 可选，后端模糊搜索 name / description） */
 export const getRoles = (params: ListParams<{ keyword: string }>) => {
