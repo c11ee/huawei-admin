@@ -1,46 +1,66 @@
-import pdfIcon from "@/assets/images/PDF@2x.png";
-import excelIcon from "@/assets/images/EXCEL@2x.png";
-import excelIcon2 from "@/assets/images/EXCEL@2x-2.png";
-import wordIcon from "@/assets/images/WORD@2x.png";
-import pptIcon from "@/assets/images/PPT@2x.png";
+import folderIcon from "@/assets/attachment/FOLDER.png";
+import docIcon from "@/assets/attachment/DOC.png";
+import pdfIcon from "@/assets/attachment/PDF.png";
+import pptIcon from "@/assets/attachment/PPT.png";
+import xlsIcon from "@/assets/attachment/XLS.png";
+import mp3Icon from "@/assets/attachment/MP3.png";
+import videoIcon from "@/assets/attachment/VIDEO.png";
+import textIcon from "@/assets/attachment/TEXT.png";
+import zipIcon from "@/assets/attachment/ZIP.png";
+import imageIcon from "@/assets/attachment/IMAGE.png";
+import type { AttachmentNode } from "@/api/types/attachment";
 
-export const iconMap = [
-  { ext: ".pdf", icon: pdfIcon },
-  { ext: ".ppt", icon: pptIcon },
-  { ext: ".xls", icon: excelIcon },
-  { ext: ".xlsx", icon: excelIcon2 },
-  { ext: ".doc", icon: wordIcon },
-  { ext: ".docx", icon: wordIcon },
-];
-
-export const getFileIcon = (url: string) => {
-  const lower = url.toLowerCase();
-  for (const { ext, icon } of iconMap) {
-    if (lower.endsWith(ext)) return icon;
-  }
-  return url;
+/** 文件后缀 → 图标映射 */
+export const iconExtMap: Record<string, string> = {
+  doc: docIcon,
+  docx: docIcon,
+  wps: docIcon,
+  pdf: pdfIcon,
+  ppt: pptIcon,
+  pptx: pptIcon,
+  xls: xlsIcon,
+  xlsx: xlsIcon,
+  csv: xlsIcon,
+  mp3: mp3Icon,
+  wav: mp3Icon,
+  flac: mp3Icon,
+  aac: mp3Icon,
+  ogg: mp3Icon,
+  wma: mp3Icon,
+  mp4: videoIcon,
+  avi: videoIcon,
+  mov: videoIcon,
+  wmv: videoIcon,
+  flv: videoIcon,
+  mkv: videoIcon,
+  webm: videoIcon,
+  zip: zipIcon,
+  rar: zipIcon,
+  "7z": zipIcon,
+  tar: zipIcon,
+  gz: zipIcon,
+  txt: textIcon,
+  md: textIcon,
+  json: textIcon,
+  xml: textIcon,
+  log: textIcon,
+  html: textIcon,
+  htm: textIcon,
+  css: textIcon,
+  js: textIcon,
+  jsx: textIcon,
+  ts: textIcon,
+  tsx: textIcon
 };
 
-/**
- * 获取最小图片 URL
- * @param url 图片 URL
- * @returns 最小图片 URL
- */
-export function getMinImageUrl(url: string) {
-  if (!url) return url;
+/** 获取文件展示图标/缩略图 */
+export const getFileUrl = (item: AttachmentNode): string => {
+  if (item.type === "folder") return folderIcon;
+  if (item.mime_type.startsWith("image/")) return item.file_url;
+  return iconExtMap[item.extension] ?? imageIcon;
+};
 
-  // 👇 关键：只有 阿里云OSS + 没有任何参数 ? 时，才压缩
-  if (url.includes("aliyuncs.com") && !url.includes("?")) {
-    return (
-      url + "?x-oss-process=image/resize,w_200/format,webp/quality,q_30/strip"
-    );
-  }
-
-  // 有参数 或 不是阿里云 → 直接返回原 URL，不修改
-  return url;
-}
-
-/** 格式化文件名, 获取最后一个 / 后的字符串 */
-export function formatFileName(name: string) {
-  return name.split("/").pop() || name;
-}
+/** 获取展示名称（文件夹用 name，文件用 original_name） */
+export const getName = (item: AttachmentNode): string => {
+  return item.type === "folder" ? item.name : item.original_name;
+};

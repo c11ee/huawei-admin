@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import { useElementSize } from "@vueuse/core";
-import { inject, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { useFetch } from "./utils/useFetch";
-import { TableV2SortOrder } from "element-plus";
-import { useAction } from "./utils/useAction";
+import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   Close,
   CopyDocument,
@@ -12,126 +8,112 @@ import {
   Download,
   FolderAdd,
   Refresh,
-  Search
+  Search,
+  Upload
 } from "@element-plus/icons-vue";
-// import UploadCom from "@/components/common/UploadCom.vue";
-import { Teleport } from "vue";
+import { TableV2SortOrder } from "element-plus";
 import { useRoute } from "vue-router";
-import { formatFileName } from "./utils/common";
-import { isNaN } from "lodash";
-import { useDrag } from "./utils/useDrag";
 import { copyText } from "@/utils/tool";
-import { Upload } from "@element-plus/icons-vue";
-import { uploadFile } from "@/api/attachment";
-import { useUserStoreHook } from "@/store/modules/user";
-import { ElMessage, type UploadRequestOptions } from "element-plus";
+
+import { useFetch } from "./utils/useFetch";
+import { useAction } from "./utils/useAction";
+import { useDrag } from "./utils/useDrag";
+import { useSelection } from "./utils/useSelection";
+import { useContextMenu } from "./utils/useContextMenu";
+import { useUpload } from "./utils/useUpload";
+import { getFileUrl, getName } from "./utils/common";
 
 defineOptions({ name: "Attachment" });
 
 const route = useRoute();
 const loading = ref(false);
-const uploading = ref(false);
+const fileItemRef = ref<HTMLDivElement[]>([]);
 
+// allFileList 由此处创建，同时注入 useFetch 和 useSelection，消除循环依赖
+const allFileList = ref<any[]>([]);
+
+// --- 选择（先于 useFetch，使 clearSelectedMaps 可用） ---
+const {
+  container,
+  selecto,
+  selectedMaps,
+  selectedCount,
+  isAllSelected,
+  clearSelectedMaps,
+  getGroupedSelectedIds,
+  handleSelectAll,
+  initSelecto
+} = useSelection({ allFileList });
+
+// --- 数据 ---
 const {
   params,
   treeRef,
-  allFileList,
   treeFileList,
   fetchFolderList,
   fetchData,
   handleCurrentChange,
   handleSort,
   handleReset,
-  handleSearch,
-  getName,
-  getFileUrl
-} = useFetch({
-  clearSelectedMaps: () => clearSelectedMaps()
-});
+  handleSearch
+} = useFetch({ allFileList, clearSelectedMaps });
+
+// --- 右键菜单 ---
 const {
-  selectedMaps,
-  selectedCount,
-  isAllSelected,
-  showPreview,
-  previewInfo,
   dropdownRef,
   dropdownTriggerRef,
   dropdownEditRow,
-  container,
-  selecto,
-  uploadRef,
+  handleRightClick,
+  handleDropdownVisibleChange
+} = useContextMenu({ params });
+
+// --- 上传 ---
+const { uploading, uploadRef, handleUpload, handleDragUpload } = useUpload({
+  params: params as { folder_id: number },
+  onSuccess: fetchData
+});
+
+// --- 文件操作 ---
+const {
+  showPreview,
+  previewInfo,
   handleDelete,
   handleDownload,
-  handleSelectAll,
   handleNewFolder,
-  clearSelectedMaps,
   handleDeleteBatch,
   handleClick,
   handleRestoreBatch,
-  handleRightClick,
-  handleDropdownVisibleChange,
-  initSelecto,
-  handleKeyDown,
-  handleDragUpload
+  handleKeyDown
 } = useAction({
-  allFileList,
+  params,
   treeFileList,
   fetchData,
-  params,
-  fetchFolderList
+  fetchFolderList,
+  getGroupedSelectedIds
 });
 
+// --- 拖拽 ---
 const {
   dropContainer,
   isDragOver,
   handleDragEnter,
   handleDragLeave,
   handleDragOver,
-  handleDrop,
-  handleFiles
-} = useDrag({
-  onDrop: handleDragUpload
-});
+  handleDrop
+} = useDrag({ onDrop: handleDragUpload });
 
 const initRightClick = (e: Event) => {
   e.preventDefault();
 };
 
-/** el-upload 自定义上传 */
-const handleUpload = async (options: UploadRequestOptions) => {
-  console.log("111");
-  uploading.value = true;
-  try {
-    const res = await uploadFile({
-      user_id: useUserStoreHook().userInfo.id,
-      folder_id: params.folder_id,
-      file: options.file
-    });
-    ElMessage.success("上传成功");
-    fetchData();
-    return res;
-  } catch (error) {
-    // 错误已在拦截器中处理
-    return Promise.reject(error);
-  } finally {
-    uploading.value = false;
-  }
-};
-
 onMounted(async () => {
-  /**
-   * pid 父目录id
-   * del 表示当前文件已删除
-   */
   const { folder_id, del } = route.query;
   fetchFolderList();
 
   if (folder_id != "0" && folder_id != undefined && del != "1") {
-    const p = Number(folder_id);
-    params.folder_id = p;
+    params.folder_id = Number(folder_id);
   }
 
-  // tree 渲染后立即高亮，不等 fetchData 完成
   await nextTick();
   treeRef.value?.setCurrentKey(params.folder_id);
 
@@ -140,13 +122,10 @@ onMounted(async () => {
   loading.value = false;
 
   initSelecto();
-
-  // 监听 ESC 键
   document.addEventListener("keydown", handleKeyDown);
 });
 
 onUnmounted(() => {
-  // 移除 ESC 键监听
   document.removeEventListener("keydown", handleKeyDown);
 });
 
@@ -155,20 +134,17 @@ watch(
   async n => {
     const pid = Number(n);
     params.folder_id = pid;
-
     loading.value = true;
     await fetchData();
     loading.value = false;
   }
 );
 
-const fileItemRef = ref<HTMLDivElement[]>([]);
 watch(
   () => selectedMaps.value,
   n => {
     nextTick(() => {
       if (selecto.value) {
-        // 确保 Selecto 选中状态为最新
         const selectedItems = fileItemRef.value.filter(
           el => n[Number(el.dataset.id)]
         );
@@ -207,7 +183,7 @@ watch(
               class="h-full flex items-center"
               @contextmenu="
                 handleRightClick($event, 'tree-folder', {
-                  att_id: node.data.id
+                  id: node.data.id
                 })
               "
             >
@@ -364,7 +340,9 @@ watch(
                         </el-icon>
                         <el-icon
                           class="cursor-pointer text-xs"
-                          @click.stop="handleDownload(item.file_url, item.original_name)"
+                          @click.stop="
+                            handleDownload(item.file_url, item.original_name)
+                          "
                         >
                           <Download />
                         </el-icon>
@@ -471,9 +449,7 @@ watch(
       virtual-triggering
       hide-on-click
       trigger="contextmenu"
-      :key="
-        dropdownEditRow?.att_id ? 'dd_' + dropdownEditRow.att_id : 'defaultKey'
-      "
+      :key="dropdownEditRow?.id ? 'dd_' + dropdownEditRow.id : 'defaultKey'"
       v-if="dropdownEditRow"
       @visible-change="handleDropdownVisibleChange"
     >
@@ -483,19 +459,24 @@ watch(
           <el-dropdown-item
             :icon="FolderAdd"
             v-if="['folder', 'tree-folder'].includes(dropdownEditRow.type)"
-            @click="handleNewFolder(dropdownEditRow.att_id)"
+            @click="handleNewFolder(dropdownEditRow.id)"
             >新增文件夹</el-dropdown-item
           >
           <el-dropdown-item
             :icon="DocumentCopy"
             v-if="dropdownEditRow.type == 'file'"
-            @click.stop="copyText(dropdownEditRow.original_url)"
+            @click.stop="copyText(dropdownEditRow.file_url)"
             >复制</el-dropdown-item
           >
           <el-dropdown-item
             :icon="Download"
             v-if="dropdownEditRow.type == 'file'"
-            @click.stop="handleDownload(dropdownEditRow.original_url, dropdownEditRow.original_name)"
+            @click.stop="
+              handleDownload(
+                dropdownEditRow.file_url,
+                dropdownEditRow.original_name
+              )
+            "
             >下载</el-dropdown-item
           >
           <el-dropdown-item
