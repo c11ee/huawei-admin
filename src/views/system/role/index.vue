@@ -46,11 +46,7 @@
           </div>
         </template>
 
-        <div
-          v-loading="loading"
-          ref="contentRef"
-          class="h-full min-h-0 overflow-hidden"
-        >
+        <div v-loading="loading" class="h-full min-h-0 overflow-hidden">
           <XPopperProxy @confirm="handleDeleteConfirm">
             <XVirtualTable
               ref="tableRef"
@@ -137,7 +133,11 @@
           @input="onQueryChanged"
         />
 
-        <div class="flex-1 min-h-0" v-loading="permissionLoading">
+        <div
+          ref="treeContentRef"
+          class="flex-1 min-h-0"
+          v-loading="permissionLoading"
+        >
           <el-tree-v2
             ref="treeRef"
             show-checkbox
@@ -241,7 +241,7 @@ const listParams = ref({
 
 const tableRef = ref();
 const treeRef = ref<TreeV2Instance>();
-const contentRef = ref<HTMLDivElement>();
+const treeContentRef = ref<HTMLDivElement>();
 
 const HEADER_ACTIONS = [
   { tip: "关闭", icon: Close, handler: () => handleClose() },
@@ -508,12 +508,11 @@ const filterMethod = (query: string, node: Permission) =>
 onMounted(() => {
   fetchRoles();
 
-  if (contentRef.value) {
-    useResizeObserver(contentRef, entries => {
+  if (treeContentRef.value) {
+    useResizeObserver(treeContentRef, entries => {
       const entry = entries[0];
       const { height } = entry.contentRect;
-      // 减去搜索框和内边距的补差
-      treeHeight.value = height - 48;
+      treeHeight.value = height;
     });
   }
 });
