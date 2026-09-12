@@ -6,6 +6,32 @@
     label-width="80px"
     label-position="right"
   >
+    <el-form-item label="头像" prop="avatar">
+      <div class="h-[48px]">
+        <el-upload
+          :http-request="handleAvatarUpload"
+          :show-file-list="false"
+          :before-upload="beforeAvatarUpload"
+          accept="image/*"
+        >
+          <el-avatar
+            v-loading="avatarUploading"
+            :size="48"
+            :src="formData.avatar || undefined"
+            class="cursor-pointer hover:opacity-80 transition-opacity"
+            title="点击上传头像"
+          >
+            <template #default v-if="!formData.avatar">
+              <text v-if="formData.nickname">{{
+                formData.nickname?.charAt(0) || "?"
+              }}</text>
+              <el-icon :size="28" v-else><UserFilled /></el-icon>
+            </template>
+          </el-avatar>
+        </el-upload>
+      </div>
+    </el-form-item>
+
     <el-form-item label="昵称" prop="nickname">
       <el-input
         v-model="formData.nickname"
@@ -46,7 +72,7 @@
         class="w-full!"
       >
         <el-option
-          v-for="role in roleOptions"
+          v-for="role in filteredRoleOptions"
           :key="role.id"
           :label="role.name"
           :value="role.id"
@@ -79,9 +105,18 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from "vue";
-import type { FormInstance, FormRules } from "element-plus";
+import {
+  ElMessage,
+  type FormInstance,
+  type FormRules,
+  type UploadRequestOptions
+} from "element-plus";
+import { UserFilled } from "@element-plus/icons-vue";
 import type { User } from "@/api/types/user";
 import { getRoles, type Role } from "@/api/role";
+import { uploadFile } from "@/api/attachment";
+import { useUserStoreHook } from "@/store/modules/user";
+import { UPLOAD_FOLDER_ID } from "@/config/attachment";
 
 interface Props {
   /** 编辑时传入的当前行数据（有值则为编辑模式） */
@@ -96,11 +131,18 @@ const isEdit = computed(() => !!props.row);
 
 const formRef = ref<FormInstance>();
 const roleOptions = ref<Role[]>([]);
+const avatarUploading = ref(false);
+
+/** 过滤掉超级管理员，不可被分配 */
+const filteredRoleOptions = computed(() =>
+  roleOptions.value.filter(role => role.name !== "超级管理员")
+);
 
 const formData = reactive({
   id: props.row?.id ?? undefined,
   nickname: props.row?.nickname ?? "",
   username: props.row?.username ?? "",
+  avatar: props.row?.avatar ?? "",
   password: "",
   phone: props.row?.phone ?? "",
   email: props.row?.email ?? "",
@@ -140,6 +182,40 @@ const fetchRoles = async () => {
     }
   } catch (error) {
     console.error("获取角色列表失败:", error);
+  }
+};
+
+/** 头像上传前校验 */
+const beforeAvatarUpload = (file: File) => {
+  if (!file.type.startsWith("image/")) {
+    ElMessage.error("只能上传图片文件");
+    return false;
+  }
+  if (file.size / 1024 / 1024 > 2) {
+    ElMessage.error("图片大小不能超过 2MB");
+    return false;
+  }
+  return true;
+};
+
+/** 上传用户头像 */
+const handleAvatarUpload = async (options: UploadRequestOptions) => {
+  avatarUploading.value = true;
+  try {
+    const res = await uploadFile({
+      user_id: useUserStoreHook().userInfo.id,
+      folder_id: UPLOAD_FOLDER_ID.AVATAR,
+      file: options.file
+    });
+    if (res.code === 200) {
+      formData.avatar = res.data.file_url;
+      ElMessage.success("头像上传成功");
+    }
+    return res;
+  } catch {
+    return Promise.reject();
+  } finally {
+    avatarUploading.value = false;
   }
 };
 

@@ -72,7 +72,7 @@ class PureHttp {
         }
         // 增加前缀
         config.url =
-          import.meta.env.VITE_API_BASE_URL + "api/admin" + config.url;
+          import.meta.env.VITE_API_BASE_URL + "admin" + config.url;
 
         // 刷新token接口
         if (config.url.endsWith("/refresh-token")) {

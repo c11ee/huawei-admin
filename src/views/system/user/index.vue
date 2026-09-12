@@ -66,7 +66,7 @@
                   :src="row.avatar || undefined"
                   class="shrink-0"
                 >
-                  {{ row.name?.charAt(0) || row.username?.charAt(0) || "?" }}
+                  {{ row.nickname?.charAt(0) || "?" }}
                 </el-avatar>
               </template>
 
