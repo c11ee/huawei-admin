@@ -31,6 +31,10 @@ const tabsList = [
     name: "ep:"
   },
   {
+    label: "Ant Design",
+    name: "ant-design:"
+  },
+  {
     label: "Remix Icon",
     name: "ri:"
   },
