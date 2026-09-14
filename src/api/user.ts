@@ -1,10 +1,5 @@
 import { http } from "@/utils/http";
-import {
-  UserPermission,
-  type TokenResult,
-  type UserInfo,
-  type User
-} from "./types/user";
+import type { UserPermission, TokenResult, UserInfo, User } from "./types/user";
 export * from "./types/user";
 
 /** 登录 */
@@ -37,7 +32,7 @@ export const getUsers = (params: ListParams<{ keyword: string }>) => {
   if (params.keyword?.trim()) {
     params.keyword = params.keyword.trim();
   }
-  return http.request<ApiResponse<PageData<User[]>>>("get", "/v1/user", {
+  return http.request<PageData<User[]>>("get", "/v1/user", {
     params
   });
 };

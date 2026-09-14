@@ -47,8 +47,8 @@
         </template>
 
         <div
-          v-loading="loading"
           ref="contentRef"
+          v-loading="loading"
           class="h-full min-h-0 overflow-hidden"
         >
           <XPopperProxy @confirm="handleDeleteConfirm">
@@ -181,8 +181,8 @@ const fetchUsers = async () => {
   try {
     const res = await getUsers(listParams.value);
     if (res.code === 200) {
-      userList.value = res.data.data;
-      listParams.value.total = res.data.total;
+      userList.value = res.data;
+      listParams.value.total = res.total;
     }
   } catch (error) {
     console.error("获取用户列表失败:", error);

@@ -147,7 +147,7 @@ const fetchRoles = async () => {
   try {
     const res = await getRoles({ page: 1, limit: 999, keyword: "" });
     if (res.code === 200) {
-      roleOptions.value = res.data.data;
+      roleOptions.value = res.data;
     }
   } catch (error) {
     console.error("获取角色列表失败:", error);

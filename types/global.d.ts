@@ -37,9 +37,8 @@ declare global {
     limit?: number;
   } & T;
 
-  /** 包含分页信息的data数据 */
-  interface PageData<T> {
-    data: T;
+  /** 包含分页信息的响应数据（page、total 与 data 同级） */
+  interface PageData<T> extends ApiResponse<T> {
     page: number;
     total: number;
   }

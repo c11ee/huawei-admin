@@ -19,7 +19,7 @@ export type Brand = {
 
 /** 获取品牌列表（分页） */
 export const getBrands = (params: { page?: number; limit?: number }) => {
-  return http.request<ApiResponse<PageData<Brand[]>>>("get", "/v1/brand", {
+  return http.request<PageData<Brand[]>>("get", "/v1/brand", {
     params
   });
 };

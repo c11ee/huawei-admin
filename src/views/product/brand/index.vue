@@ -221,8 +221,8 @@ const fetchBrands = async () => {
   try {
     const res = await getBrands(listParams.value);
     if (res.code === 200) {
-      brandList.value = res.data.data;
-      listParams.value.total = res.data.total;
+      brandList.value = res.data;
+      listParams.value.total = res.total;
     }
   } catch (error) {
     console.error("获取品牌列表失败:", error);

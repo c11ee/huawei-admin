@@ -135,8 +135,8 @@
 
         <div
           ref="treeContentRef"
-          class="flex-1 min-h-0"
           v-loading="permissionLoading"
+          class="flex-1 min-h-0"
         >
           <el-tree-v2
             ref="treeRef"
@@ -270,8 +270,8 @@ const fetchRoles = async () => {
   try {
     const res = await getRoles(listParams.value);
     if (res.code === 200) {
-      roleList.value = res.data.data;
-      listParams.value.total = res.data.total;
+      roleList.value = res.data;
+      listParams.value.total = res.total;
     }
   } catch (error) {
     console.error("获取角色列表失败:", error);

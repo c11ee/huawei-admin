@@ -1,5 +1,5 @@
 import { http } from "@/utils/http";
-import { Timestamped } from "./types/common";
+import type { Timestamped } from "./types/common";
 
 /** 角色状态：0=禁用 1=启用 */
 export type RoleStatus = 0 | 1;
@@ -18,7 +18,7 @@ export const getRoles = (params: ListParams<{ keyword: string }>) => {
   if (params.keyword?.trim()) {
     params.keyword = params.keyword.trim();
   }
-  return http.request<ApiResponse<PageData<Role[]>>>("get", "/v1/role", {
+  return http.request<PageData<Role[]>>("get", "/v1/role", {
     params
   });
 };
