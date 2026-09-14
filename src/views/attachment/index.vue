@@ -21,7 +21,7 @@ import { useDrag } from "./utils/useDrag";
 import { useSelection } from "./utils/useSelection";
 import { useContextMenu } from "./utils/useContextMenu";
 import { useUpload } from "./utils/useUpload";
-import { getFileUrl, getName } from "./utils/common";
+import { getFileUrl, getName } from "@/utils/attachment/common";
 
 defineOptions({ name: "Attachment" });
 

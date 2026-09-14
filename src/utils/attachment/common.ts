@@ -8,7 +8,7 @@ import videoIcon from "@/assets/attachment/VIDEO.png";
 import textIcon from "@/assets/attachment/TEXT.png";
 import zipIcon from "@/assets/attachment/ZIP.png";
 import imageIcon from "@/assets/attachment/IMAGE.png";
-import type { AttachmentNode } from "@/api/types/attachment";
+import type { AttachmentNode, FolderNode } from "@/api/types/attachment";
 
 /** 文件后缀 → 图标映射 */
 export const iconExtMap: Record<string, string> = {
@@ -53,6 +53,25 @@ export const iconExtMap: Record<string, string> = {
   tsx: textIcon
 };
 
+/** 图片文件后缀 */
+const imageExtensions = [
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "bmp",
+  "webp",
+  "svg",
+  "avif",
+  "ico"
+];
+
+/** 判断 URL 是否为图片 */
+export const isImageUrl = (url: string): boolean =>
+  imageExtensions.includes(
+    (url.split("?")[0].split("#")[0].split(".").pop() ?? "").toLowerCase()
+  );
+
 /** 获取文件展示图标/缩略图 */
 export const getFileUrl = (item: AttachmentNode): string => {
   if (item.type === "folder") return folderIcon;
@@ -64,3 +83,22 @@ export const getFileUrl = (item: AttachmentNode): string => {
 export const getName = (item: AttachmentNode): string => {
   return item.type === "folder" ? item.name : item.original_name;
 };
+
+/** 构造「全部」/「回收站」这类根节点 */
+export const createRootFolderNode = (
+  name: string,
+  id: number,
+  children: FolderNode[] = []
+): FolderNode => ({
+  id,
+  name,
+  user_id: 0,
+  parent_id: 0,
+  sort: 0,
+  type: "folder",
+  children,
+  created_at: "",
+  updated_at: "",
+  created_at_ts: 0,
+  updated_at_ts: 0
+});

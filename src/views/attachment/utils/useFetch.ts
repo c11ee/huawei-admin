@@ -1,7 +1,7 @@
 import { getAttachmentList, getFolderTree } from "@/api/attachment";
 import { reactive, ref, type Ref } from "vue";
 import { TableV2SortOrder } from "element-plus";
-import { getName } from "./common";
+import { getName, createRootFolderNode } from "@/utils/attachment/common";
 import { useRoute, useRouter } from "vue-router";
 import { AttachmentNode, FolderNode } from "@/api/types/attachment";
 
@@ -62,21 +62,10 @@ export const useFetch = ({
     if (!force && folderFetched) return;
     folderLoading.value = true;
     getFolderTree().then(res => {
-      const TEMP = {
-        user_id: 0,
-        parent_id: 0,
-        sort: 0,
-        type: "folder" as const,
-        children: [] as FolderNode[],
-        updated_at: "",
-        created_at: "",
-        created_at_ts: 0,
-        updated_at_ts: 0
-      };
       const treeData: FolderNode[] = [
-        { name: "全部", id: 0, ...TEMP },
+        createRootFolderNode("全部", 0),
         ...res.data,
-        { name: "回收站", id: -1, ...TEMP }
+        createRootFolderNode("回收站", -1)
       ];
       treeFileList.value = treeData;
       cachedTreeData = treeData;

@@ -51,9 +51,11 @@ export type AddFolderRequest = {
 /** 附件列表查询参数 */
 export type AttachmentListRequest = {
   folder_id: number;
-  /** 排序字段 */
+  /** 排序字段 (前端自己排序字段) */
   orderBy: TableV2SortOrder;
   keyword?: string;
+  /** 只获取图片附件 */
+  only_image?: 0 | 1;
 };
 
 export type DeleteAttachmentRequest = {

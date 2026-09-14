@@ -33,6 +33,21 @@
       />
     </el-form-item>
 
+    <el-form-item label="图标" prop="icon">
+      <XAttachmentPicker v-model="formData.icon" />
+    </el-form-item>
+
+    <el-form-item label="状态" prop="status">
+      <el-switch
+        v-model="formData.status"
+        inline-prompt
+        :active-value="1"
+        :inactive-value="0"
+        active-text="启用"
+        inactive-text="禁用"
+      />
+    </el-form-item>
+
     <el-form-item label="排序" prop="sort">
       <el-input-number
         v-model="formData.sort"
@@ -47,7 +62,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
-import type { Category } from "@/api/category";
+import type { Category, CategoryStatus } from "@/api/category";
+import XAttachmentPicker from "@/components/XAttachmentPicker/index.vue";
 
 interface Props {
   /** 分类树数据（供 tree-select 选择父级） */
@@ -70,6 +86,8 @@ const formData = reactive({
   id: props.row?.id ?? undefined,
   category_name: props.row?.category_name ?? "",
   parent_id: (props.row?.parent_id ?? props.defaultParentId ?? 0) as number,
+  icon: props.row?.icon ?? "",
+  status: (props.row?.status ?? 1) as CategoryStatus,
   sort: props.row?.sort ?? 0
 });
 

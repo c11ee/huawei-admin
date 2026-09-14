@@ -1,25 +1,14 @@
-import { h, reactive, ref, type Ref } from "vue";
-import {
-  ElForm,
-  ElFormItem,
-  ElInput,
-  ElMessage,
-  ElMessageBox,
-  ElTreeSelect
-} from "element-plus";
-import { addDialog } from "@/components/ReDialog";
+import { ref, type Ref } from "vue";
+import { ElMessage } from "element-plus";
 import { useRoute, useRouter } from "vue-router";
-import {
-  type AddFolderRequest,
-  type AttachmentNode,
-  type DeleteAttachmentRequest,
-  type FolderNode
+import type {
+  AttachmentNode,
+  DeleteAttachmentRequest,
+  FolderNode
 } from "@/api/types/attachment";
-import {
-  addFolder,
-  deleteAttachmentOrFolder,
-  restoreFolder
-} from "@/api/attachment";
+import { deleteAttachmentOrFolder, restoreFolder } from "@/api/attachment";
+import { useNewFolderDialog } from "@/utils/attachment/useNewFolderDialog";
+import { useDeleteAttachment } from "@/utils/attachment/useDeleteAttachment";
 
 export const useAction = ({
   params,
@@ -41,24 +30,13 @@ export const useAction = ({
   const showPreview = ref(false);
   const previewInfo = ref<{ url: string; name: string }>({ url: "", name: "" });
 
-  const handleDelete = (item: AttachmentNode) => {
-    ElMessageBox.confirm("确定要删除此文件吗？")
-      .then(() => {
-        const data: DeleteAttachmentRequest = {
-          attachment_ids: item.type === "file" ? String(item.id) : "",
-          folder_ids: item.type === "folder" ? String(item.id) : "",
-          recycle: 1
-        };
-        deleteAttachmentOrFolder(data)
-          .then((res: any) => {
-            fetchData();
-            if (item.type === "folder") fetchFolderList(true);
-            ElMessage.success(res.msg);
-          })
-          .catch(() => {});
-      })
-      .catch(() => {});
-  };
+  /** 删除附件 / 文件夹 */
+  const { handleDelete } = useDeleteAttachment({
+    onSuccess: item => {
+      fetchData();
+      if (item.type === "folder") fetchFolderList(true);
+    }
+  });
 
   /** 下载文件 */
   const handleDownload = async (url: string, fileName: string) => {
@@ -81,93 +59,14 @@ export const useAction = ({
   };
 
   /** 新建文件夹 */
-  const handleNewFolder = (pid?: number) => {
-    const formData = reactive<AddFolderRequest>({
-      parent_id: params.folder_id == -1 ? 0 : pid || params.folder_id || 0,
-      name: "",
-      sort: 0
-    });
-    addDialog({
-      title: "新建文件夹",
-      width: "560px",
-      class: "tw",
-      alignCenter: true,
-      sureBtnLoading: true,
-      contentRenderer: () =>
-        h(ElForm, { model: formData, labelPosition: "top" }, () => [
-          h(
-            ElFormItem,
-            {
-              prop: "att_parent_id",
-              label: "所属上级文件夹",
-              class: "mb-4"
-            },
-            () =>
-              h(ElTreeSelect, {
-                modelValue: formData.parent_id,
-                "onUpdate:modelValue": (val: number) => {
-                  formData.parent_id = val;
-                },
-                props: { label: "name", children: "children" },
-                nodeKey: "id",
-                placeholder: "请选择文件夹",
-                size: "large",
-                data:
-                  treeFileList.value.filter((i: FolderNode) => i.id !== -1) ||
-                  [],
-                defaultExpandAll: true,
-                checkStrictly: true
-              })
-          ),
-          h(
-            ElFormItem,
-            { prop: "name", label: "新建文件夹名称", class: "mb-0" },
-            () =>
-              h(ElInput, {
-                modelValue: formData.name,
-                "onUpdate:modelValue": (val: string) => {
-                  formData.name = val;
-                },
-                onKeyup: (e: KeyboardEvent) => {
-                  if (e.key === "Enter") {
-                    const dialog = (e.target as HTMLElement).closest(
-                      ".el-dialog"
-                    );
-                    const btn = dialog?.querySelector(
-                      ".el-dialog__footer .el-button--primary"
-                    ) as HTMLElement | null;
-                    btn?.click();
-                  }
-                },
-                placeholder: "请输入文件夹名称",
-                size: "large",
-                maxlength: 20,
-                showWordLimit: true,
-                style:
-                  "--el-fill-color-blank: transparent;--el-color-info: #848a97;"
-              })
-          )
-        ]),
-      beforeSure(done, { closeLoading }) {
-        if (!formData.name) {
-          ElMessage.error("请输入文件夹名称");
-          closeLoading();
-          return false;
-        }
-        addFolder(formData)
-          .then((res: any) => {
-            ElMessage.success(res.msg);
-            closeLoading();
-            fetchFolderList(true);
-            fetchData();
-            done();
-          })
-          .catch(() => {
-            closeLoading();
-          });
-      }
-    });
-  };
+  const { handleNewFolder } = useNewFolderDialog({
+    getParentId: () => (params.folder_id == -1 ? 0 : params.folder_id),
+    getTreeData: () => treeFileList.value.filter(i => i.id !== -1),
+    onSuccess: () => {
+      fetchFolderList(true);
+      fetchData();
+    }
+  });
 
   /** 批量删除 */
   const handleDeleteBatch = () => {

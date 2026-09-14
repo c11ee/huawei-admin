@@ -8,7 +8,10 @@
             <el-button type="primary" :icon="Plus" @click="handleCreateTop"
               >添加分类</el-button
             >
-            <el-button :icon="Refresh" :loading="loading" @click="fetchCategories"
+            <el-button
+              :icon="Refresh"
+              :loading="loading"
+              @click="fetchCategories"
               >刷新</el-button
             >
           </div>
@@ -26,6 +29,34 @@
               treeConfig: { childrenField: 'children', expandAll: true }
             }"
           >
+            <!-- 图标列自定义渲染 -->
+            <template #icon-default="{ row }">
+              <div class="flex justify-center">
+                <el-image
+                  v-if="row.icon"
+                  :src="row.icon"
+                  class="size-8"
+                  fit="contain"
+                  :preview-src-list="[row.icon]"
+                  preview-teleported
+                />
+              </div>
+            </template>
+
+            <!-- 状态列自定义渲染 -->
+            <template #status-default="{ row }">
+              <el-switch
+                :model-value="row.status"
+                :active-value="1"
+                :inactive-value="0"
+                inline-prompt
+                :loading="loadingStatusMap[row.id]"
+                active-text="启用"
+                inactive-text="禁用"
+                @change="handleStatusChange($event as 0 | 1, row)"
+              />
+            </template>
+
             <!-- 操作列自定义渲染 -->
             <template #operation-default="{ row }">
               <el-button link type="primary" @click="handleAdd(row)">
@@ -66,7 +97,8 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
-  type Category
+  type Category,
+  type CategoryStatus
 } from "@/api/category";
 import XVirtualTable from "@/components/XVirtualTable/index.vue";
 import XPopperProxy from "@/components/XPopperProxy/index.vue";
@@ -80,6 +112,7 @@ defineOptions({
 const loading = ref(false);
 const categoryTree = ref<Category[]>([]);
 const tableRef = ref();
+const loadingStatusMap = ref<Record<number, boolean>>({});
 
 /** 列配置 */
 const columnsConfig = ref<Column[]>([
@@ -89,6 +122,22 @@ const columnsConfig = ref<Column[]>([
     minWidth: 240,
     treeNode: true,
     align: "left"
+  },
+  {
+    field: "icon",
+    title: "图标",
+    width: 100,
+    slots: { default: "icon-default" }
+  },
+  {
+    field: "status",
+    title: "状态",
+    width: 100,
+    slots: { default: "status-default" },
+    params: {
+      localFilter: true,
+      filterConfig: { 0: "禁用", 1: "启用" }
+    }
   },
   {
     field: "sort",
@@ -125,6 +174,28 @@ const fetchCategories = async () => {
     console.error("获取分类列表失败:", error);
   } finally {
     loading.value = false;
+  }
+};
+
+/** 更新分类状态 */
+const handleStatusChange = async (status: CategoryStatus, row: Category) => {
+  try {
+    loadingStatusMap.value[row.id] = true;
+    const res = await updateCategory(row.id, {
+      category_name: row.category_name,
+      parent_id: row.parent_id,
+      icon: row.icon,
+      sort: row.sort,
+      status
+    });
+    if (res.code === 200) {
+      ElMessage.success(res.msg || "操作成功");
+      row.status = status;
+    }
+  } catch (error) {
+    console.error("更新分类状态失败:", error);
+  } finally {
+    loadingStatusMap.value[row.id] = false;
   }
 };
 

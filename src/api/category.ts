@@ -1,6 +1,9 @@
 import { http } from "@/utils/http";
 import { Timestamped } from "./types/common";
 
+/** 分类状态：0=禁用 1=启用 */
+export type CategoryStatus = 0 | 1;
+
 /** 分类数据结构 */
 export type Category = {
   id: number;
@@ -8,6 +11,10 @@ export type Category = {
   category_name: string;
   /** 父分类ID，0 表示顶级分类 */
   parent_id: number;
+  /** 分类图标 */
+  icon: string;
+  /** 状态：0=禁用 1=启用 */
+  status: CategoryStatus;
   /** 排序值，越小越靠前 */
   sort: number;
   children?: Category[];
