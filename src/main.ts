@@ -13,12 +13,14 @@ import "@/plugins/console";
 import Table from "@pureadmin/table";
 // import PureDescriptions from "@pureadmin/descriptions";
 
-// 引入重置样式
+// 一定要在main.ts中导入tailwind.css，防止vite每次hmr都会请求src/style/index.scss整体css文件导致热更新慢的问题
+// 注意：必须早于 reset.scss 导入，先声明css级联层顺序（theme < base < components < utilities），
+// 否则 reset.scss 中的 @layer base 会先建立、把 base 层钉在首位
+import "./style/tailwind.css";
+// 引入重置样式（内容置于 @layer base，避免压过 tailwind 的 utilities 层）
 import "./style/reset.scss";
 // 导入公共样式
 import "./style/index.scss";
-// 一定要在main.ts中导入tailwind.css，防止vite每次hmr都会请求src/style/index.scss整体css文件导致热更新慢的问题
-import "./style/tailwind.css";
 import "element-plus/dist/index.css";
 // 导入字体图标
 import "./assets/iconfont/iconfont.js";
