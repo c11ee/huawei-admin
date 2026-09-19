@@ -37,8 +37,8 @@ export type Product = {
 
 /** 规格值提交结构 */
 export type ProductSpecValuePayload = {
-  /** 前端临时唯一标识，用于与SKU关联 */
-  temp_id: string;
+  /** 记录ID：新增时为前端生成的临时ID（后端写库用自增主键，仅用它做关联），编辑时为后端返回的记录ID */
+  id: number;
   /** 规格值，如：雅川青 */
   value: string;
   /** 规格值图片（需要图片的规格项必填） */
@@ -49,8 +49,8 @@ export type ProductSpecValuePayload = {
 
 /** 规格项提交结构 */
 export type ProductSpecPayload = {
-  /** 前端临时唯一标识 */
-  temp_id: string;
+  /** 记录ID：新增时为前端生成的临时ID，编辑时为后端返回的记录ID */
+  id: number;
   /** 规格项名称，如：颜色 */
   name: string;
   /** 规格值是否必须上传图片：0=否 1=是 */
@@ -63,8 +63,8 @@ export type ProductSpecPayload = {
 
 /** SKU 提交结构 */
 export type ProductSkuPayload = {
-  /** 前端临时唯一标识 */
-  temp_id: string;
+  /** 记录ID：新增时为前端生成的临时ID，编辑时为后端返回的记录ID */
+  id: number;
   /** SKU编码 */
   sku_code: string;
   /** SKU名称 */
@@ -87,8 +87,8 @@ export type ProductSkuPayload = {
   status: ProductStatus;
   /** 排序值 */
   sort: number;
-  /** 关联的规格值 temp_id 列表 */
-  spec_value_temp_ids: string[];
+  /** 关联的规格值ID列表 */
+  spec_value_ids: number[];
 };
 
 /** SPU 提交结构 */
@@ -131,8 +131,8 @@ export type ProductSavePayload = {
   specs: ProductSpecPayload[];
   /** SKU列表 */
   skus: ProductSkuPayload[];
-  /** 默认SKU的 temp_id */
-  default_sku_temp_id: string;
+  /** 默认SKU的ID */
+  default_sku_id: number;
 };
 
 /** 商品详情（编辑时回显） */
@@ -150,8 +150,8 @@ export type ProductDetail = {
   specs: ProductSpecPayload[];
   /** SKU列表 */
   skus: ProductSkuPayload[];
-  /** 默认SKU的 temp_id */
-  default_sku_temp_id: string;
+  /** 默认SKU的ID */
+  default_sku_id: number;
 };
 
 /** 获取商品详情 */

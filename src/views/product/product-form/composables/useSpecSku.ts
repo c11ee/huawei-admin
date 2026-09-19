@@ -1,21 +1,21 @@
 import { computed, ref } from "vue";
 import type { SkuDraft, SpecItemDraft, SpecValueDraft } from "../types";
 
-/** 本地唯一标识生成器（提交时作为 temp_id 使用） */
-let uidSeed = 0;
-export const nextUid = (prefix: string) => `${prefix}-${++uidSeed}`;
+/** 本地唯一ID生成器：用时间戳递增，避免与后端自增主键（新增时不生效）冲突 */
+let uidSeed = Date.now();
+export const nextUid = () => ++uidSeed;
 
 export const createSpecValue = (
   value = "",
   image_url = ""
 ): SpecValueDraft => ({
-  temp_id: nextUid("spec-value"),
+  id: nextUid(),
   value,
   image_url
 });
 
 export const createSpecItem = (): SpecItemDraft => ({
-  temp_id: nextUid("spec"),
+  id: nextUid(),
   name: "",
   is_image_required: 0,
   values: [createSpecValue()]
@@ -35,29 +35,29 @@ interface UseSpecSkuOptions {
 export function useSpecSku({ getProductName, getSpuCode }: UseSpecSkuOptions) {
   const specList = ref<SpecItemDraft[]>([createSpecItem()]);
   const skus = ref<SkuDraft[]>([]);
-  const defaultSkuTempId = ref("");
+  const defaultSkuId = ref<number>();
 
-  /** 规格值 temp_id 与规格值文案的映射（用于 SKU 规格展示与自动命名） */
+  /** 规格值ID与规格值文案的映射（用于 SKU 规格展示与自动命名） */
   const valueLabelMap = computed(() => {
-    const map = new Map<string, string>();
+    const map = new Map<number, string>();
     specList.value.forEach(item => {
-      item.values.forEach(value => map.set(value.temp_id, value.value.trim()));
+      item.values.forEach(value => map.set(value.id, value.value.trim()));
     });
     return map;
   });
 
   /** SKU 对应的规格文案，如：雅川青 / 256GB */
-  const specTextOf = (tempIds: string[]) =>
-    tempIds
+  const specTextOf = (specValueIds: number[]) =>
+    specValueIds
       .map(id => valueLabelMap.value.get(id) ?? "")
       .filter(Boolean)
       .join(" / ");
 
   /** 自动生成的 SKU 名称 */
-  const autoSkuName = (tempIds: string[]) =>
+  const autoSkuName = (specValueIds: number[]) =>
     [
       getProductName().trim(),
-      ...tempIds.map(id => valueLabelMap.value.get(id) ?? "")
+      ...specValueIds.map(id => valueLabelMap.value.get(id) ?? "")
     ]
       .filter(Boolean)
       .join(" ");
@@ -72,7 +72,7 @@ export function useSpecSku({ getProductName, getSpuCode }: UseSpecSkuOptions) {
   /** 刷新仍处于自动生成状态的 SKU 名称与编码 */
   const refreshAutoSkus = () => {
     skus.value.forEach((sku, index) => {
-      if (sku.auto_name) sku.name = autoSkuName(sku.spec_value_temp_ids);
+      if (sku.auto_name) sku.name = autoSkuName(sku.spec_value_ids);
       if (sku.auto_code) sku.sku_code = autoSkuCode(index);
     });
   };
@@ -82,7 +82,7 @@ export function useSpecSku({ getProductName, getSpuCode }: UseSpecSkuOptions) {
     const items = specList.value;
     if (!items.length || items.some(item => !item.values.length)) {
       skus.value = [];
-      defaultSkuTempId.value = "";
+      defaultSkuId.value = undefined;
       return;
     }
 
@@ -96,14 +96,14 @@ export function useSpecSku({ getProductName, getSpuCode }: UseSpecSkuOptions) {
 
     const previous = new Map<string, SkuDraft>();
     skus.value.forEach(sku =>
-      previous.set([...sku.spec_value_temp_ids].sort().join("|"), sku)
+      previous.set([...sku.spec_value_ids].sort().join("|"), sku)
     );
 
     skus.value = combos.map(values => {
-      const tempIds = values.map(v => v.temp_id);
-      const prev = previous.get([...tempIds].sort().join("|"));
+      const valueIds = values.map(v => v.id);
+      const prev = previous.get([...valueIds].sort().join("|"));
       return {
-        temp_id: prev?.temp_id ?? nextUid("sku"),
+        id: prev?.id ?? nextUid(),
         sku_code: prev?.sku_code ?? "",
         name: prev?.name ?? "",
         image_url: prev?.image_url ?? "",
@@ -114,7 +114,7 @@ export function useSpecSku({ getProductName, getSpuCode }: UseSpecSkuOptions) {
         weight: prev?.weight ?? 0,
         volume: prev?.volume ?? 0,
         status: prev?.status ?? 1,
-        spec_value_temp_ids: tempIds,
+        spec_value_ids: valueIds,
         auto_name: prev?.auto_name ?? true,
         auto_code: prev?.auto_code ?? true
       };
@@ -122,15 +122,15 @@ export function useSpecSku({ getProductName, getSpuCode }: UseSpecSkuOptions) {
 
     refreshAutoSkus();
 
-    if (!skus.value.some(sku => sku.temp_id === defaultSkuTempId.value)) {
-      defaultSkuTempId.value = skus.value[0]?.temp_id ?? "";
+    if (!skus.value.some(sku => sku.id === defaultSkuId.value)) {
+      defaultSkuId.value = skus.value[0]?.id;
     }
   };
 
   return {
     specList,
     skus,
-    defaultSkuTempId,
+    defaultSkuId,
     valueLabelMap,
     specTextOf,
     autoSkuName,

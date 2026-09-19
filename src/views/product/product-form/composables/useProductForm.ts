@@ -79,7 +79,7 @@ export function useProductForm() {
   const {
     specList,
     skus,
-    defaultSkuTempId,
+    defaultSkuId,
     specTextOf,
     autoSkuName,
     autoSkuCode,
@@ -132,7 +132,7 @@ export function useProductForm() {
     if (!template?.spec_json?.length) return;
 
     specList.value = template.spec_json.map(item => ({
-      temp_id: nextUid("spec"),
+      id: nextUid(),
       name: item.name,
       is_image_required: 0,
       values: (item.values || []).length
@@ -205,13 +205,13 @@ export function useProductForm() {
     const invalidPrice = skus.value.find(sku => !(Number(sku.sale_price) > 0));
     if (invalidPrice) {
       return warnBasic(
-        `SKU「${specTextOf(invalidPrice.spec_value_temp_ids)}」的售价必须大于0`
+        `SKU「${specTextOf(invalidPrice.spec_value_ids)}」的售价必须大于0`
       );
     }
 
     if (
-      !defaultSkuTempId.value ||
-      !skus.value.some(sku => sku.temp_id === defaultSkuTempId.value)
+      !defaultSkuId.value ||
+      !skus.value.some(sku => sku.id === defaultSkuId.value)
     ) {
       return warnBasic("请选择默认SKU");
     }
@@ -235,21 +235,21 @@ export function useProductForm() {
         mobile_detail_html: formData.mobile_detail_html
       },
       specs: specList.value.map((item, index) => ({
-        temp_id: item.temp_id,
+        id: item.id,
         name: item.name.trim(),
         is_image_required: item.is_image_required,
         sort: index + 1,
         values: item.values.map((value, valueIndex) => ({
-          temp_id: value.temp_id,
+          id: value.id,
           value: value.value.trim(),
           image_url: value.image_url || "",
           sort: valueIndex + 1
         }))
       })),
       skus: skus.value.map((sku, index) => ({
-        temp_id: sku.temp_id,
+        id: sku.id,
         sku_code: sku.sku_code.trim() || autoSkuCode(index),
-        name: sku.name.trim() || autoSkuName(sku.spec_value_temp_ids),
+        name: sku.name.trim() || autoSkuName(sku.spec_value_ids),
         image_url: sku.image_url || "",
         sale_price: Number(sku.sale_price) || 0,
         cost_price: Number(sku.cost_price) || 0,
@@ -259,9 +259,9 @@ export function useProductForm() {
         volume: Number(sku.volume) || 0,
         status: sku.status,
         sort: index + 1,
-        spec_value_temp_ids: [...sku.spec_value_temp_ids]
+        spec_value_ids: [...sku.spec_value_ids]
       })),
-      default_sku_temp_id: defaultSkuTempId.value
+      default_sku_id: defaultSkuId.value as number
     };
   };
 
@@ -290,12 +290,12 @@ export function useProductForm() {
 
     specList.value = detail.specs?.length
       ? detail.specs.map(item => ({
-          temp_id: item.temp_id || nextUid("spec"),
+          id: item.id ?? nextUid(),
           name: item.name ?? "",
           is_image_required: item.is_image_required ?? 0,
           values: (item.values || []).length
             ? item.values.map(value => ({
-                temp_id: value.temp_id || nextUid("spec-value"),
+                id: value.id ?? nextUid(),
                 value: value.value ?? "",
                 image_url: value.image_url ?? ""
               }))
@@ -304,7 +304,7 @@ export function useProductForm() {
       : [createSpecItem()];
 
     skus.value = (detail.skus || []).map(sku => ({
-      temp_id: sku.temp_id || nextUid("sku"),
+      id: sku.id ?? nextUid(),
       sku_code: sku.sku_code ?? "",
       name: sku.name ?? "",
       image_url: sku.image_url ?? "",
@@ -315,13 +315,12 @@ export function useProductForm() {
       weight: Number(sku.weight) || 0,
       volume: Number(sku.volume) || 0,
       status: (sku.status ?? 1) as ProductStatus,
-      spec_value_temp_ids: (sku.spec_value_temp_ids || []).map(String),
+      spec_value_ids: [...(sku.spec_value_ids ?? [])],
       auto_name: false,
       auto_code: false
     }));
 
-    defaultSkuTempId.value =
-      detail.default_sku_temp_id || skus.value[0]?.temp_id || "";
+    defaultSkuId.value = detail.default_sku_id || skus.value[0]?.id;
   };
 
   /** 返回商品列表 */
@@ -447,7 +446,7 @@ export function useProductForm() {
     categoryProps,
     specList,
     skus,
-    defaultSkuTempId,
+    defaultSkuId,
     regenerate,
     handleTemplateChange,
     handleCancel,

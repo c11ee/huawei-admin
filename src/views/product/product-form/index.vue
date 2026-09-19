@@ -180,7 +180,7 @@
               <el-form-item label="SKU列表">
                 <SkuTable
                   v-model:skus="skus"
-                  v-model:default-sku-temp-id="defaultSkuTempId"
+                  v-model:default-sku-id="defaultSkuId"
                   :spec-list="specList"
                   @regenerate="regenerate"
                 />
@@ -243,7 +243,7 @@ const {
   categoryProps,
   specList,
   skus,
-  defaultSkuTempId,
+  defaultSkuId,
   regenerate,
   handleTemplateChange,
   handleCancel,

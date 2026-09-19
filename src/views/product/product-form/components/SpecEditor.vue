@@ -3,9 +3,9 @@
     <div ref="itemListRef" class="spec-items">
       <div
         v-for="(item, index) in specList"
-        :key="item.temp_id"
+        :key="item.id"
         class="spec-item"
-        :data-uid="item.temp_id"
+        :data-uid="item.id"
       >
         <div class="spec-item-head flex flex-wrap items-center gap-x-2 gap-y-2">
           <el-icon class="drag-handle item-drag-handle">
@@ -33,12 +33,12 @@
           />
         </div>
 
-        <div class="spec-values mt-2 ml-6" :data-uid="item.temp_id">
+        <div class="spec-values mt-2 ml-6" :data-uid="item.id">
           <div
             v-for="(specValue, valueIndex) in item.values"
-            :key="specValue.temp_id"
+            :key="specValue.id"
             class="spec-value"
-            :data-uid="specValue.temp_id"
+            :data-uid="specValue.id"
           >
             <el-icon class="drag-handle value-drag-handle">
               <Rank />
@@ -158,7 +158,7 @@ const syncValueSortables = () => {
   const root = itemListRef.value;
   if (!root) return;
 
-  const validUids = new Set(specList.value.map(item => item.temp_id));
+  const validUids = new Set(specList.value.map(item => String(item.id)));
   valueSortableMap.forEach((instance, uid) => {
     if (!validUids.has(uid)) {
       instance.destroy();
@@ -169,7 +169,7 @@ const syncValueSortables = () => {
   root.querySelectorAll<HTMLElement>(".spec-values").forEach(container => {
     const uid = container.dataset.uid;
     if (!uid || valueSortableMap.has(uid)) return;
-    const specItem = specList.value.find(item => item.temp_id === uid);
+    const specItem = specList.value.find(item => String(item.id) === uid);
     if (!specItem) return;
 
     valueSortableMap.set(

@@ -26,9 +26,9 @@
         <template #default="{ row }">
           <el-radio
             v-if="!isBatchRow(row)"
-            :model-value="defaultSkuTempId"
-            :value="row.temp_id"
-            @change="setDefaultSku(row.temp_id)"
+            :model-value="defaultSkuId"
+            :value="row.id"
+            @change="setDefaultSku(row.id)"
           >
             <span />
           </el-radio>
@@ -38,14 +38,14 @@
       <!-- 规格按规格项拆列，相邻行相同规格值纵向合并 -->
       <el-table-column
         v-for="(specItem, specIndex) in specList"
-        :key="specItem.temp_id"
+        :key="specItem.id"
         :label="specItem.name || `规格${specIndex + 1}`"
         min-width="110"
       >
         <template #default="{ row }">
           <el-select
             v-if="isBatchRow(row)"
-            v-model="batchSpecValues[specItem.temp_id]"
+            v-model="batchSpecValues[specItem.id]"
             size="small"
             clearable
             placeholder="全部"
@@ -53,13 +53,13 @@
           >
             <el-option
               v-for="value in specItem.values"
-              :key="value.temp_id"
+              :key="value.id"
               :label="value.value"
-              :value="value.temp_id"
+              :value="value.id"
             />
           </el-select>
           <span v-else class="text-xs">
-            {{ specValueOf(row.spec_value_temp_ids, specIndex) }}
+            {{ specValueOf(row.spec_value_ids, specIndex) }}
           </span>
         </template>
       </el-table-column>
@@ -246,8 +246,8 @@ const props = defineProps<{
 
 /** SKU 列表 */
 const skus = defineModel<SkuDraft[]>("skus", { required: true });
-/** 默认 SKU 的 temp_id */
-const defaultSkuTempId = defineModel<string>("defaultSkuTempId", {
+/** 默认 SKU 的ID */
+const defaultSkuId = defineModel<number | undefined>("defaultSkuId", {
   required: true
 });
 
@@ -272,33 +272,33 @@ const batchRow = reactive<SkuBatchRow>({
 /** 表格数据：第一行为批量设置行 */
 const tableData = computed<SkuTableRow[]>(() => [batchRow, ...skus.value]);
 
-/** 批量设置行选中的规格值：规格项 temp_id -> 规格值 temp_id */
-const batchSpecValues = reactive<Record<string, string | undefined>>({});
+/** 批量设置行选中的规格值：规格项ID -> 规格值ID */
+const batchSpecValues = reactive<Record<number, number | undefined>>({});
 
 /** 批量设置行的目标 SKU：按选中的规格值筛选，未选规格值则视为全部 */
 const batchTargetSkus = computed(() => {
-  const selected = Object.values(batchSpecValues).filter((id): id is string =>
+  const selected = Object.values(batchSpecValues).filter((id): id is number =>
     Boolean(id)
   );
   if (!selected.length) return skus.value;
   return skus.value.filter(sku =>
-    selected.every(id => sku.spec_value_temp_ids.includes(id))
+    selected.every(id => sku.spec_value_ids.includes(id))
   );
 });
 
 /** 批量设置行将影响的 SKU 数量 */
 const batchTargetCount = computed(() => batchTargetSkus.value.length);
 
-/** 规格值被删除后清掉失效的批量筛选，避免下拉框显示原始 temp_id */
+/** 规格值被删除后清掉失效的批量筛选，避免下拉框显示原始ID */
 watch(
   () => props.specList,
   () => {
     const validIds = new Set(
-      props.specList.flatMap(item => item.values.map(value => value.temp_id))
+      props.specList.flatMap(item => item.values.map(value => value.id))
     );
     Object.keys(batchSpecValues).forEach(key => {
-      const id = batchSpecValues[key];
-      if (id && !validIds.has(id)) delete batchSpecValues[key];
+      const id = batchSpecValues[Number(key)];
+      if (id && !validIds.has(id)) delete batchSpecValues[Number(key)];
     });
   },
   { deep: true }
@@ -309,11 +309,11 @@ const skuRowClassName = ({ row }: { row: TableAnyRow }) =>
   isBatchRow(row) ? "sku-batch-row" : "";
 
 /** 取 SKU 在指定规格项上的规格值 */
-const specValueOf = (tempIds: string[], specIndex: number) => {
+const specValueOf = (specValueIds: number[], specIndex: number) => {
   const specItem = props.specList[specIndex];
   if (!specItem) return "";
   return (
-    specItem.values.find(value => tempIds.includes(value.temp_id))?.value ?? ""
+    specItem.values.find(value => specValueIds.includes(value.id))?.value ?? ""
   );
 };
 
@@ -321,7 +321,7 @@ const specValueOf = (tempIds: string[], specIndex: number) => {
 const specColumnSpans = computed(() =>
   props.specList.map((_, specIndex) => {
     const values = skus.value.map(row =>
-      specValueOf(row.spec_value_temp_ids, specIndex)
+      specValueOf(row.spec_value_ids, specIndex)
     );
     const spans = values.map(() => 1);
     let start = 0;
@@ -370,8 +370,8 @@ const handleBatchStatus = (row: TableAnyRow) => {
 };
 
 /** 选择默认 SKU */
-const setDefaultSku = (tempId: string) => {
-  defaultSkuTempId.value = tempId;
+const setDefaultSku = (id: number) => {
+  defaultSkuId.value = id;
 };
 </script>
 
