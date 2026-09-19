@@ -6,18 +6,27 @@ import {
   DeleteAttachmentRequest,
   FileNode,
   FolderNode,
+  UpdateAttachmentFolderRequest,
   UploadFileRequest
 } from "./types/attachment";
 
-/** 上传 */
-export const uploadFile = (params: UploadFileRequest) => {
+/** 上传（后端仅支持单个文件，多文件需调用多次） */
+export const uploadFile = (
+  params: UploadFileRequest,
+  onProgress?: (percent: number) => void
+) => {
   const formData = new FormData();
   formData.append("user_id", String(params.user_id));
   formData.append("folder_id", String(params.folder_id));
   formData.append("file", params.file);
   return http.request<ApiResponse<FileNode>>("post", "/v1/common/upload", {
     data: formData,
-    headers: { "Content-Type": "multipart/form-data" }
+    headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress: e => {
+      if (onProgress && e.total) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    }
   });
 };
 
@@ -57,4 +66,15 @@ export const restoreFolder = (data: DeleteAttachmentRequest) => {
   return http.request<ApiResponse<[]>>("put", `/v1/attachment/restore`, {
     data
   });
+};
+
+/** 批量修改附件所属文件夹 */
+export const updateAttachmentFolderId = (
+  data: UpdateAttachmentFolderRequest
+) => {
+  return http.request<ApiResponse<[]>>(
+    "put",
+    "/v1/attachment/update-folder-id",
+    { data }
+  );
 };

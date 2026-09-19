@@ -8,6 +8,7 @@ import type {
 } from "@/api/types/attachment";
 import { deleteAttachmentOrFolder, restoreFolder } from "@/api/attachment";
 import { useNewFolderDialog } from "@/utils/attachment/useNewFolderDialog";
+import { useMoveAttachmentDialog } from "@/utils/attachment/useMoveAttachmentDialog";
 import { useDeleteAttachment } from "@/utils/attachment/useDeleteAttachment";
 
 export const useAction = ({
@@ -66,6 +67,13 @@ export const useAction = ({
       fetchFolderList(true);
       fetchData();
     }
+  });
+
+  /** 批量移动附件到指定文件夹 */
+  const { handleMoveAttachment } = useMoveAttachmentDialog({
+    getAttachmentIds: () => getGroupedSelectedIds().file,
+    getTreeData: () => treeFileList.value.filter(i => i.id !== -1),
+    onSuccess: () => fetchData()
   });
 
   /** 批量删除 */
@@ -140,6 +148,7 @@ export const useAction = ({
     handleDownload,
     handleNewFolder,
     handleDeleteBatch,
+    handleMoveAttachment,
     handleClick,
     handleRestoreBatch,
     handleKeyDown

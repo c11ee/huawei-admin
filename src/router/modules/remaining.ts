@@ -44,5 +44,25 @@ export default [
         component: () => import("@/layout/redirect.vue")
       }
     ]
+  },
+  // 商品添加/编辑（从商品列表页进入，不显示在菜单）
+  {
+    path: "/product/product-form",
+    component: Layout,
+    meta: {
+      title: "商品编辑",
+      showLink: false
+    },
+    children: [
+      {
+        path: "",
+        name: "ProductForm",
+        component: () => import("@/views/product/product-form/index.vue"),
+        meta: {
+          title: "商品编辑",
+          showLink: false
+        }
+      }
+    ]
   }
 ] satisfies Array<RouteConfigsTable>;

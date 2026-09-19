@@ -63,3 +63,9 @@ export type DeleteAttachmentRequest = {
   folder_ids: string;
   recycle?: 0 | 1;
 };
+
+/** 批量修改附件所属文件夹 */
+export type UpdateAttachmentFolderRequest = {
+  attachment_ids: string;
+  folder_id: number;
+};

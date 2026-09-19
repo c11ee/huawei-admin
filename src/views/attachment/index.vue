@@ -68,7 +68,14 @@ const {
 } = useContextMenu({ params });
 
 // --- 上传 ---
-const { uploading, uploadRef, handleUpload, handleDragUpload } = useUpload({
+const {
+  uploading,
+  uploadRef,
+  handleUpload,
+  handleDragUpload,
+  uploadDialogVisible,
+  uploadTasks
+} = useUpload({
   params: params as { folder_id: number },
   onSuccess: fetchData
 });
@@ -81,6 +88,7 @@ const {
   handleDownload,
   handleNewFolder,
   handleDeleteBatch,
+  handleMoveAttachment,
   handleClick,
   handleRestoreBatch,
   handleKeyDown
@@ -146,7 +154,7 @@ watch(
     nextTick(() => {
       if (selecto.value) {
         const selectedItems = fileItemRef.value.filter(
-          el => n[Number(el.dataset.id)]
+          el => n[el.dataset.type + el.dataset.id]
         );
         // @ts-ignore
         selecto.value.selectedTargets = selectedItems;
@@ -371,7 +379,7 @@ watch(
             >
               <div class="mask"></div>
               <el-icon size="48" color="#077aff"><Upload /></el-icon>
-              <p class="drag-text">松开鼠标上传文件，只支持单个上传</p>
+              <p class="drag-text">松开鼠标上传文件，支持多个文件</p>
             </div>
           </div>
 
@@ -402,6 +410,16 @@ watch(
                 </el-button>
               </template>
             </el-popconfirm>
+
+            <el-button
+              plain
+              size="small"
+              class="ml-4!"
+              v-if="params.folder_id != -1"
+              @click="handleMoveAttachment()"
+            >
+              移动到
+            </el-button>
 
             <el-button
               plain
@@ -488,6 +506,47 @@ watch(
         </el-dropdown-menu>
       </template>
     </el-dropdown>
+
+    <!-- 上传进度弹窗 -->
+    <el-dialog
+      v-model="uploadDialogVisible"
+      title="上传文件"
+      width="480"
+      append-to-body
+      :close-on-click-modal="false"
+    >
+      <div class="flex flex-col gap-y-4 max-h-[50vh] overflow-auto">
+        <div
+          v-for="task in uploadTasks"
+          :key="task.uid"
+          class="flex flex-col gap-y-1"
+        >
+          <div class="text-xs text-gray-600 line-clamp-1" :title="task.name">
+            {{ task.name }}
+          </div>
+          <div class="flex items-center gap-x-3">
+            <el-progress
+              class="flex-1"
+              :percentage="task.percent"
+              :stroke-width="6"
+              :status="
+                task.status === 'uploading'
+                  ? ''
+                  : task.status === 'success'
+                    ? 'success'
+                    : 'exception'
+              "
+            />
+            <span class="w-10 text-right text-xs">
+              {{ task.status === "error" ? "失败" : task.percent + "%" }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="uploadDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
