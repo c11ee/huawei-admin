@@ -1,15 +1,9 @@
 import { http } from "@/utils/http";
 import type { Timestamped } from "./types/common";
-import type { User } from "./types/user";
+import type { Operator } from "./types/user";
 
 /** 规格模板状态：0=禁用 1=启用 */
 export type SpecTemplateStatus = 0 | 1;
-
-/** 创建人 / 更新人（关联的用户信息） */
-export type SpecTemplateOperator = Pick<
-  User,
-  "id" | "username" | "nickname" | "avatar"
->;
 
 /** 规格值 */
 export type SpecValue = {
@@ -41,9 +35,9 @@ export type SpecTemplate = {
   /** 更新人ID */
   updated_by?: number;
   /** 创建人信息 */
-  creator?: SpecTemplateOperator | null;
+  creator?: Operator | null;
   /** 更新人信息 */
-  updater?: SpecTemplateOperator | null;
+  updater?: Operator | null;
 } & Timestamped;
 
 /** 获取规格模板列表（分页） */

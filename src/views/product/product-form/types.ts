@@ -21,7 +21,6 @@ export interface SpecItemDraft {
 export interface SkuDraft {
   /** 记录ID：新增（含编辑时新增的行）为前端生成的临时ID，编辑回填为后端记录ID */
   id: number;
-  sku_code: string;
   name: string;
   image_url: string;
   sale_price?: number;
@@ -34,8 +33,6 @@ export interface SkuDraft {
   spec_value_ids: number[];
   /** 名称是否仍由系统自动生成（用户手动修改后不再覆盖） */
   auto_name: boolean;
-  /** 编码是否仍由系统自动生成（用户手动修改后不再覆盖） */
-  auto_code: boolean;
 }
 
 /** SKU 表格首行的批量设置行 */

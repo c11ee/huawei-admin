@@ -158,7 +158,7 @@ const loadingStatusMap = ref<Record<number, boolean>>({});
 /** 分页参数 */
 const listParams = ref({
   page: 1,
-  limit: 20,
+  limit: 100,
   total: 0
 });
 

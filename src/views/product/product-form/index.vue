@@ -36,20 +36,16 @@
           <el-tab-pane label="基本信息" name="basic">
             <el-scrollbar height="100%">
               <div class="info-grid">
-                <el-form-item label="商品名称" prop="product_name">
+                <el-form-item
+                  class="info-grid-full"
+                  label="商品名称"
+                  prop="product_name"
+                >
                   <el-input
                     v-model="formData.product_name"
                     placeholder="请输入商品名称"
                     maxlength="100"
                     show-word-limit
-                  />
-                </el-form-item>
-
-                <el-form-item label="商品编码" prop="spu_code">
-                  <el-input
-                    v-model="formData.spu_code"
-                    placeholder="请输入商品编码，如：HW-PH-001"
-                    maxlength="50"
                   />
                 </el-form-item>
 
@@ -69,19 +65,21 @@
                 </el-form-item>
 
                 <el-form-item label="品牌" prop="brand_id">
-                  <el-select
-                    v-model="formData.brand_id"
-                    placeholder="请选择品牌"
-                    clearable
-                    class="w-full"
-                  >
-                    <el-option
-                      v-for="brand in brandList"
-                      :key="brand.id"
-                      :label="brand.name"
-                      :value="brand.id"
-                    />
-                  </el-select>
+                  <div class="w-full flex h-full">
+                    <el-select
+                      v-model="formData.brand_id"
+                      placeholder="请选择品牌"
+                      clearable
+                      class="w-full"
+                    >
+                      <el-option
+                        v-for="brand in brandList"
+                        :key="brand.id"
+                        :label="brand.name"
+                        :value="brand.id"
+                      />
+                    </el-select>
+                  </div>
                 </el-form-item>
 
                 <el-form-item label="商品分类" prop="category_ids">
@@ -144,7 +142,7 @@
                   <XAttachmentPicker
                     v-model="formData.slider_images"
                     multiple
-                    :limit="9"
+                    :limit="20"
                     title="选择轮播图"
                   />
                 </el-form-item>

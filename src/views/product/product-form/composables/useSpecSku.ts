@@ -2,8 +2,12 @@ import { computed, ref } from "vue";
 import type { SkuDraft, SpecItemDraft, SpecValueDraft } from "../types";
 
 /** 本地唯一ID生成器：用时间戳递增，避免与后端自增主键（新增时不生效）冲突 */
-let uidSeed = Date.now();
+const uidBase = Date.now();
+let uidSeed = uidBase;
 export const nextUid = () => ++uidSeed;
+
+/** 前端生成的临时ID远大于后端自增主键，据此判断记录是否已落库（未落库的ID不提交给后端） */
+export const isServerId = (id: number) => id < uidBase;
 
 export const createSpecValue = (
   value = "",
@@ -24,24 +28,27 @@ export const createSpecItem = (): SpecItemDraft => ({
 interface UseSpecSkuOptions {
   /** 商品名称，用于自动生成 SKU 名称 */
   getProductName: () => string;
-  /** 商品编码，用于自动生成 SKU 编码 */
-  getSpuCode: () => string;
 }
 
 /**
  * 规格项 / 规格值 / SKU 的领域逻辑：
- * 规格组合生成 SKU、SKU 名称与编码的自动生成、规格值文案映射
+ * 规格组合生成 SKU、SKU 名称的自动生成、规格值文案映射
  */
-export function useSpecSku({ getProductName, getSpuCode }: UseSpecSkuOptions) {
+export function useSpecSku({ getProductName }: UseSpecSkuOptions) {
   const specList = ref<SpecItemDraft[]>([createSpecItem()]);
   const skus = ref<SkuDraft[]>([]);
   const defaultSkuId = ref<number>();
 
-  /** 规格值ID与规格值文案的映射（用于 SKU 规格展示与自动命名） */
-  const valueLabelMap = computed(() => {
-    const map = new Map<number, string>();
+  /** 规格值ID -> 所属规格项名称与规格值文案（用于 SKU 规格展示、自动命名与提交组装） */
+  const valueMetaMap = computed(() => {
+    const map = new Map<number, { name: string; value: string }>();
     specList.value.forEach(item => {
-      item.values.forEach(value => map.set(value.id, value.value.trim()));
+      item.values.forEach(value =>
+        map.set(value.id, {
+          name: item.name.trim(),
+          value: value.value.trim()
+        })
+      );
     });
     return map;
   });
@@ -49,7 +56,7 @@ export function useSpecSku({ getProductName, getSpuCode }: UseSpecSkuOptions) {
   /** SKU 对应的规格文案，如：雅川青 / 256GB */
   const specTextOf = (specValueIds: number[]) =>
     specValueIds
-      .map(id => valueLabelMap.value.get(id) ?? "")
+      .map(id => valueMetaMap.value.get(id)?.value ?? "")
       .filter(Boolean)
       .join(" / ");
 
@@ -57,23 +64,25 @@ export function useSpecSku({ getProductName, getSpuCode }: UseSpecSkuOptions) {
   const autoSkuName = (specValueIds: number[]) =>
     [
       getProductName().trim(),
-      ...specValueIds.map(id => valueLabelMap.value.get(id) ?? "")
+      ...specValueIds.map(id => valueMetaMap.value.get(id)?.value ?? "")
     ]
       .filter(Boolean)
       .join(" ");
 
-  /** 自动生成的 SKU 编码 */
-  const autoSkuCode = (index: number) => {
-    const prefix = getSpuCode().trim();
-    const seq = String(index + 1).padStart(3, "0");
-    return prefix ? `${prefix}-${seq}` : seq;
+  /** SKU 的规格组合：{ 规格项名称: 规格值 }，如 { "颜色": "星云灰" } */
+  const specValuesOf = (specValueIds: number[]) => {
+    const specValues: Record<string, string> = {};
+    specValueIds.forEach(id => {
+      const meta = valueMetaMap.value.get(id);
+      if (meta?.name) specValues[meta.name] = meta.value;
+    });
+    return specValues;
   };
 
-  /** 刷新仍处于自动生成状态的 SKU 名称与编码 */
+  /** 刷新仍处于自动生成状态的 SKU 名称 */
   const refreshAutoSkus = () => {
-    skus.value.forEach((sku, index) => {
+    skus.value.forEach(sku => {
       if (sku.auto_name) sku.name = autoSkuName(sku.spec_value_ids);
-      if (sku.auto_code) sku.sku_code = autoSkuCode(index);
     });
   };
 
@@ -104,7 +113,6 @@ export function useSpecSku({ getProductName, getSpuCode }: UseSpecSkuOptions) {
       const prev = previous.get([...valueIds].sort().join("|"));
       return {
         id: prev?.id ?? nextUid(),
-        sku_code: prev?.sku_code ?? "",
         name: prev?.name ?? "",
         image_url: prev?.image_url ?? "",
         sale_price: prev?.sale_price ?? 0,
@@ -115,8 +123,7 @@ export function useSpecSku({ getProductName, getSpuCode }: UseSpecSkuOptions) {
         volume: prev?.volume ?? 0,
         status: prev?.status ?? 1,
         spec_value_ids: valueIds,
-        auto_name: prev?.auto_name ?? true,
-        auto_code: prev?.auto_code ?? true
+        auto_name: prev?.auto_name ?? true
       };
     });
 
@@ -131,10 +138,10 @@ export function useSpecSku({ getProductName, getSpuCode }: UseSpecSkuOptions) {
     specList,
     skus,
     defaultSkuId,
-    valueLabelMap,
+    valueMetaMap,
     specTextOf,
     autoSkuName,
-    autoSkuCode,
+    specValuesOf,
     refreshAutoSkus,
     regenerate
   };

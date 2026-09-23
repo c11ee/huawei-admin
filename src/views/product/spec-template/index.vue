@@ -94,42 +94,12 @@
 
             <!-- 创建人列自定义渲染 -->
             <template #creator-default="{ row }">
-              <div
-                v-if="row.creator"
-                class="flex items-center justify-center gap-x-1.5"
-              >
-                <el-avatar
-                  :size="24"
-                  :src="row.creator.avatar || undefined"
-                  class="shrink-0"
-                >
-                  {{ row.creator.nickname?.charAt(0) || "?" }}
-                </el-avatar>
-                <span class="truncate">{{
-                  row.creator.nickname || row.creator.username || "-"
-                }}</span>
-              </div>
-              <span v-else class="text-(--el-text-color-placeholder)">-</span>
+              <XOperatorCell :user="row.creator" />
             </template>
 
             <!-- 更新人列自定义渲染 -->
             <template #updater-default="{ row }">
-              <div
-                v-if="row.updater"
-                class="flex items-center justify-center gap-x-1.5"
-              >
-                <el-avatar
-                  :size="24"
-                  :src="row.updater.avatar || undefined"
-                  class="shrink-0"
-                >
-                  {{ row.updater.nickname?.charAt(0) || "?" }}
-                </el-avatar>
-                <span class="truncate">{{
-                  row.updater.nickname || row.updater.username || "-"
-                }}</span>
-              </div>
-              <span v-else class="text-(--el-text-color-placeholder)">-</span>
+              <XOperatorCell :user="row.updater" />
             </template>
 
             <!-- 操作列自定义渲染 -->
@@ -221,6 +191,7 @@ import {
 } from "@/api/specTemplate";
 import XVirtualTable from "@/components/XVirtualTable/index.vue";
 import XPopperProxy from "@/components/XPopperProxy/index.vue";
+import XOperatorCell from "@/components/XOperatorCell/index.vue";
 import { addDialog, closeDialog } from "@/components/ReDialog";
 import SpecTemplateForm from "./SpecTemplateForm.vue";
 
@@ -237,7 +208,7 @@ const loadingStatusMap = ref<Record<number, boolean>>({});
 /** 分页参数 */
 const listParams = ref({
   page: 1,
-  limit: 20,
+  limit: 100,
   total: 0,
   keyword: ""
 });

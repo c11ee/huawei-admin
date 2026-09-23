@@ -23,6 +23,7 @@ import {
 import {
   createSpecItem,
   createSpecValue,
+  isServerId,
   nextUid,
   useSpecSku
 } from "./useSpecSku";
@@ -43,7 +44,6 @@ export function useProductForm() {
   /** 表单字段所属分页，校验失败时用于自动切换 */
   const fieldTabMap: Record<string, string> = {
     product_name: "basic",
-    spu_code: "basic",
     brand_id: "basic",
     category_ids: "basic",
     slider_images: "basic"
@@ -63,7 +63,6 @@ export function useProductForm() {
   const formData = reactive({
     product_name: "",
     product_description: "",
-    spu_code: "",
     brand_id: undefined as number | undefined,
     spec_template_id: null as number | null,
     category_ids: [] as number[],
@@ -82,22 +81,20 @@ export function useProductForm() {
     defaultSkuId,
     specTextOf,
     autoSkuName,
-    autoSkuCode,
+    specValuesOf,
     refreshAutoSkus,
     regenerate
   } = useSpecSku({
-    getProductName: () => formData.product_name,
-    getSpuCode: () => formData.spu_code
+    getProductName: () => formData.product_name
   });
+
+  /** SPU 主键ID：编辑时由详情接口回填，新增时为空（新增不提交该字段） */
+  const spuId = ref<number>();
 
   const rules: FormRules = {
     product_name: [
       { required: true, message: "请输入商品名称", trigger: "blur" },
       { max: 100, message: "商品名称不能超过100个字符", trigger: "blur" }
-    ],
-    spu_code: [
-      { required: true, message: "请输入商品编码", trigger: "blur" },
-      { max: 50, message: "商品编码不能超过50个字符", trigger: "blur" }
     ],
     brand_id: [{ required: true, message: "请选择品牌", trigger: "change" }],
     category_ids: [
@@ -142,9 +139,9 @@ export function useProductForm() {
     regenerate();
   };
 
-  /** 商品名称 / 编码变更时同步自动生成的 SKU 名称与编码 */
+  /** 商品名称变更时同步自动生成的 SKU 名称 */
   watch(
-    () => [formData.product_name, formData.spu_code],
+    () => formData.product_name,
     () => refreshAutoSkus()
   );
 
@@ -218,11 +215,13 @@ export function useProductForm() {
 
     return {
       spu: {
-        spu_code: formData.spu_code.trim(),
+        // 编辑时提交 SPU 主键ID，新增时为 undefined（不会出现在请求体中）
+        id: spuId.value,
         product_name: formData.product_name.trim(),
         product_description: formData.product_description.trim(),
         brand_id: formData.brand_id as number,
-        spec_template_id: formData.spec_template_id,
+        // 未选择时统一提交 null（后端未设置时详情接口会返回 0）
+        spec_template_id: formData.spec_template_id || null,
         slider_images: [...formData.slider_images],
         video_url: formData.video_url,
         video_cover_url: formData.video_cover_url,
@@ -234,21 +233,22 @@ export function useProductForm() {
         detail_html: formData.detail_html,
         mobile_detail_html: formData.mobile_detail_html
       },
+      // 未落库的规格项 / 规格值不传 id，由后端新增
       specs: specList.value.map((item, index) => ({
-        id: item.id,
+        id: isServerId(item.id) ? item.id : undefined,
         name: item.name.trim(),
         is_image_required: item.is_image_required,
         sort: index + 1,
         values: item.values.map((value, valueIndex) => ({
-          id: value.id,
+          id: isServerId(value.id) ? value.id : undefined,
           value: value.value.trim(),
           image_url: value.image_url || "",
           sort: valueIndex + 1
         }))
       })),
       skus: skus.value.map((sku, index) => ({
-        id: sku.id,
-        sku_code: sku.sku_code.trim() || autoSkuCode(index),
+        id: isServerId(sku.id) ? sku.id : undefined,
+        is_default: sku.id === defaultSkuId.value ? 1 : 0,
         name: sku.name.trim() || autoSkuName(sku.spec_value_ids),
         image_url: sku.image_url || "",
         sale_price: Number(sku.sale_price) || 0,
@@ -259,32 +259,29 @@ export function useProductForm() {
         volume: Number(sku.volume) || 0,
         status: sku.status,
         sort: index + 1,
-        spec_value_ids: [...sku.spec_value_ids]
-      })),
-      default_sku_id: defaultSkuId.value as number
+        spec_values: specValuesOf(sku.spec_value_ids)
+      }))
     };
   };
 
-  /** 编辑模式：回填商品详情 */
+  /** 编辑模式：回填商品详情（SPU 字段平铺在顶层，与列表结构一致） */
   const fillForm = (detail: ProductDetail) => {
-    const spu = detail.spu || ({} as ProductDetail["spu"]);
+    spuId.value = detail.id;
 
-    formData.product_name = spu.product_name ?? "";
-    formData.product_description = spu.product_description ?? "";
-    formData.spu_code = spu.spu_code ?? "";
-    formData.brand_id = spu.brand_id ?? undefined;
-    formData.spec_template_id = spu.spec_template_id ?? null;
-    formData.slider_images = spu.slider_images?.length
-      ? [...spu.slider_images]
+    formData.product_name = detail.product_name ?? "";
+    formData.product_description = detail.product_description ?? "";
+    formData.brand_id = detail.brand_id ?? undefined;
+    // 后端未设置规格模板时详情返回 0，这里统一按「未选择」处理（否则下拉框会显示 0）
+    formData.spec_template_id = detail.spec_template_id || null;
+    formData.slider_images = detail.slider_images?.length
+      ? [...detail.slider_images]
       : [];
-    formData.video_url = spu.video_url ?? "";
-    formData.video_cover_url = spu.video_cover_url ?? "";
-    formData.status = (spu.status ?? 0) as ProductStatus;
-    formData.sort = spu.sort ?? 0;
+    formData.video_url = detail.video_url ?? "";
+    formData.video_cover_url = detail.video_cover_url ?? "";
+    formData.status = detail.status;
+    formData.sort = detail.sort ?? 0;
 
-    formData.category_ids = detail.category_ids?.length
-      ? [...detail.category_ids]
-      : [];
+    formData.category_ids = (detail.categories || []).map(item => item.id);
     formData.detail_html = detail.detail?.detail_html ?? "";
     formData.mobile_detail_html = detail.detail?.mobile_detail_html ?? "";
 
@@ -303,9 +300,24 @@ export function useProductForm() {
         }))
       : [createSpecItem()];
 
-    skus.value = (detail.skus || []).map(sku => ({
+    /** 规格值ID查找表：`规格项名称|规格值` -> 本地规格值ID */
+    const valueIdMap = new Map<string, number>();
+    specList.value.forEach(item => {
+      item.values.forEach(value => {
+        valueIdMap.set(`${item.name}|${value.value}`, value.id);
+      });
+    });
+
+    /** 详情的 spec_json 用「规格项名称 / 规格值文案」表达，这里回解为本地规格值ID */
+    const toSpecValueIds = (specJson: Record<string, string> = {}) =>
+      Object.entries(specJson).flatMap(([name, value]) => {
+        const id = valueIdMap.get(`${name}|${value}`);
+        return id ? [id] : [];
+      });
+
+    const skuList = detail.skus || [];
+    skus.value = skuList.map(sku => ({
       id: sku.id ?? nextUid(),
-      sku_code: sku.sku_code ?? "",
       name: sku.name ?? "",
       image_url: sku.image_url ?? "",
       sale_price: Number(sku.sale_price) || 0,
@@ -314,13 +326,13 @@ export function useProductForm() {
       stock: Number(sku.stock) || 0,
       weight: Number(sku.weight) || 0,
       volume: Number(sku.volume) || 0,
-      status: (sku.status ?? 1) as ProductStatus,
-      spec_value_ids: [...(sku.spec_value_ids ?? [])],
-      auto_name: false,
-      auto_code: false
+      status: sku.status,
+      spec_value_ids: toSpecValueIds(sku.spec_json),
+      auto_name: false
     }));
 
-    defaultSkuId.value = detail.default_sku_id || skus.value[0]?.id;
+    const defaultIndex = skuList.findIndex(sku => sku.is_default === 1);
+    defaultSkuId.value = skus.value[defaultIndex >= 0 ? defaultIndex : 0]?.id;
   };
 
   /** 返回商品列表 */

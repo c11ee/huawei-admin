@@ -39,6 +39,12 @@ export type Menu = {
 
 export type UserInfo = User;
 
+/** 关联的用户信息（创建人 / 更新人） */
+export type Operator = Pick<
+  User,
+  "id" | "username" | "nickname" | "avatar"
+>;
+
 export interface UserPermission {
   button_permissions: string[];
   menu_permissions: Menu[];

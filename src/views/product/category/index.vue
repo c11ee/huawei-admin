@@ -177,6 +177,14 @@ const fetchCategories = async () => {
   }
 };
 
+/** 父级状态变更后，子孙分类在本地树中同步为相同状态（后端已级联更新） */
+const syncDescendantsStatus = (row: Category, status: CategoryStatus) => {
+  (row.children || []).forEach(child => {
+    child.status = status;
+    syncDescendantsStatus(child, status);
+  });
+};
+
 /** 更新分类状态 */
 const handleStatusChange = async (status: CategoryStatus, row: Category) => {
   try {
@@ -191,6 +199,7 @@ const handleStatusChange = async (status: CategoryStatus, row: Category) => {
     if (res.code === 200) {
       ElMessage.success(res.msg || "操作成功");
       row.status = status;
+      syncDescendantsStatus(row, status);
     }
   } catch (error) {
     console.error("更新分类状态失败:", error);

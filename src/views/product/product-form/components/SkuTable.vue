@@ -64,25 +64,6 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="SKU编码" width="180">
-        <template #default="{ row }">
-          <el-tooltip
-            v-if="isBatchRow(row)"
-            content="选择规格值后填写，只应用到匹配的 SKU；留空不改"
-            placement="top"
-          >
-            <span class="text-xs text-(--el-color-primary)">批量设置</span>
-          </el-tooltip>
-          <el-input
-            v-else
-            v-model="row.sku_code"
-            size="small"
-            placeholder="如：HW-PH-001-001"
-            @input="row.auto_code = false"
-          />
-        </template>
-      </el-table-column>
-
       <el-table-column label="SKU名称" width="220">
         <template #default="{ row }">
           <span
