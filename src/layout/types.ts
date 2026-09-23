@@ -20,7 +20,6 @@ export type routeMetaType = {
   icon?: string | FunctionalComponent;
   showLink?: boolean;
   savedPosition?: boolean;
-  auths?: Array<string>;
 };
 
 export type RouteConfigs = {

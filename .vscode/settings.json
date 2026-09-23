@@ -24,7 +24,6 @@
   "iconify.excludes": ["el"],
   "vscodeCustomCodeColor.highlightValue": [
     "v-loading",
-    "v-auth",
     "v-copy",
     "v-longpress",
     "v-optimize",

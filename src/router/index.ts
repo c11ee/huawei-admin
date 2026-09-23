@@ -151,13 +151,13 @@ router.beforeEach(async (to: ToRouteType, _from, next) => {
   }
 
   if (Cookies.get(multipleTabsKey) && userInfo) {
-    // 无权限跳转403页面
-    if (
-      to.meta?.roles &&
-      !isOneOfArray(to.meta?.roles, userPermission?.button_permissions ?? [])
-    ) {
-      next({ path: "/error/403" });
-    }
+    // 无权限跳转403页面 (后端已过滤无权限页面)
+    // if (
+    //   to.meta?.roles &&
+    //   !isOneOfArray(to.meta?.roles, userPermission?.button_permissions ?? [])
+    // ) {
+    //   next({ path: "/error/403" });
+    // }
     // 开启隐藏首页后在浏览器地址栏手动输入首页welcome路由则跳转到404页面
     if (VITE_HIDE_HOME === "true" && to.fullPath === "/welcome") {
       next({ path: "/error/404" });

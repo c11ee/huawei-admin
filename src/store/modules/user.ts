@@ -19,19 +19,19 @@ import { UserInfo, UserPermission, type TokenResult } from "@/api/types/user";
 
 export const useUserStore = defineStore("pure-user", {
   state: (): userType => ({
-    // 头像
+    /** 头像 */
     avatar: storageLocal().getItem<any>(userKey)?.avatar ?? "",
-    // 用户名
+    /** 用户名 */
     username: storageLocal().getItem<any>(userKey)?.username ?? "",
-    // 昵称
+    /** 昵称 */
     nickname: storageLocal().getItem<any>(userKey)?.nickname ?? "",
-    // 按钮级别权限
+    /** 按钮级别权限 */
     permissions: storageLocal().getItem<any>(userKey)?.permissions ?? [],
-    // 用户信息 完整
+    /** 用户信息 完整 */
     userInfo: storageLocal().getItem<any>(userKey) ?? ({} as UserInfo),
-    // 是否勾选了登录页的免登录
+    /** 是否勾选了登录页的免登录 */
     isRemembered: false,
-    // 登录页的免登录存储几天，默认7天
+    /** 登录页的免登录存储几天，默认7天 */
     loginDay: 7
   }),
   actions: {

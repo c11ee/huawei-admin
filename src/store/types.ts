@@ -42,6 +42,7 @@ export type userType = {
   username?: string;
   nickname?: string;
   userInfo?: UserInfo;
+  /** 按钮级别权限 */
   permissions?: Array<string>;
   isRemembered?: boolean;
   loginDay?: number;
