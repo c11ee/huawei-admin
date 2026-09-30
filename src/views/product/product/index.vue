@@ -52,10 +52,14 @@
           </el-tabs>
 
           <div class="flex items-center">
-            <el-button type="primary" :icon="Plus" @click="handleCreate"
+            <el-button
+              v-perms="['product.store']"
+              type="primary"
+              :icon="Plus"
+              @click="handleCreate"
               >添加商品</el-button
             >
-            <el-button :icon="ExportOutlined">导出</el-button>
+            <!-- <el-button :icon="ExportOutlined">导出</el-button> -->
             <!-- <el-button :icon="Refresh" :loading="loading" @click="fetchProducts"
               >刷新</el-button
             > -->
@@ -151,6 +155,7 @@
                 :loading="loadingStatusMap[row.id]"
                 active-text="上架"
                 inactive-text="下架"
+                :disabled="!hasPerms('product.updateStatus')"
                 @change="handleStatusChange($event as ProductStatus, row)"
               />
             </template>
@@ -167,41 +172,55 @@
 
             <!-- 操作列自定义渲染：回收站展示恢复与彻底删除 -->
             <template #operation-default="{ row }">
-              <template v-if="isTrashed">
-                <el-button link type="primary" @click="handleRestore(row)">
-                  恢复
-                </el-button>
+              <div class="operation-actions inline-flex items-center">
+                <template v-if="isTrashed">
+                  <el-button
+                    v-perms="['product.restore']"
+                    link
+                    type="primary"
+                    @click="handleRestore(row)"
+                  >
+                    恢复
+                  </el-button>
 
-                <el-divider direction="vertical" />
+                  <el-divider direction="vertical" />
 
-                <el-button
-                  link
-                  type="danger"
-                  data-proxy-popover
-                  data-popover-title="彻底删除后不可恢复，确定删除此商品吗？"
-                  :data-row-data="JSON.stringify({ id: row.id })"
-                >
-                  彻底删除
-                </el-button>
-              </template>
+                  <el-button
+                    v-perms="['product.destroy']"
+                    link
+                    type="danger"
+                    data-proxy-popover
+                    data-popover-title="彻底删除后不可恢复，确定删除此商品吗？"
+                    :data-row-data="JSON.stringify({ id: row.id })"
+                  >
+                    彻底删除
+                  </el-button>
+                </template>
 
-              <template v-else>
-                <el-button link type="primary" @click="handleEdit(row)">
-                  编辑
-                </el-button>
+                <template v-else>
+                  <el-button
+                    v-perms="['product.update']"
+                    link
+                    type="primary"
+                    @click="handleEdit(row)"
+                  >
+                    编辑
+                  </el-button>
 
-                <el-divider direction="vertical" />
+                  <el-divider direction="vertical" />
 
-                <el-button
-                  link
-                  type="danger"
-                  data-proxy-popover
-                  data-popover-title="确定删除此商品吗？"
-                  :data-row-data="JSON.stringify({ id: row.id })"
-                >
-                  删除
-                </el-button>
-              </template>
+                  <el-button
+                    v-perms="['product.destroy']"
+                    link
+                    type="danger"
+                    data-proxy-popover
+                    data-popover-title="确定删除此商品吗？"
+                    :data-row-data="JSON.stringify({ id: row.id })"
+                  >
+                    删除
+                  </el-button>
+                </template>
+              </div>
             </template>
 
             <!-- 分页左侧：批量操作 -->
@@ -217,6 +236,7 @@
 
                 <el-button
                   v-if="isTrashed"
+                  v-perms="['product.restore']"
                   plain
                   size="small"
                   type="primary"
@@ -226,29 +246,26 @@
                   批量恢复
                 </el-button>
 
-                <el-popconfirm
-                  :title="
+                <el-button
+                  v-perms="['product.destroy']"
+                  plain
+                  size="small"
+                  type="danger"
+                  :disabled="!selectedRows.length"
+                  data-proxy-confirm
+                  :data-confirm-title="
                     isTrashed
                       ? '确定彻底删除选中的商品吗？'
                       : '确定删除选中的商品吗？'
                   "
-                  placement="top-start"
-                  @confirm="handleDeleteBatch"
+                  :data-row-data="JSON.stringify({ batch: true })"
                 >
-                  <template #reference>
-                    <el-button
-                      plain
-                      size="small"
-                      type="danger"
-                      :disabled="!selectedRows.length"
-                    >
-                      批量删除
-                    </el-button>
-                  </template>
-                </el-popconfirm>
+                  批量删除
+                </el-button>
 
                 <el-button
                   v-if="!isTrashed"
+                  v-perms="['product.updateStatus']"
                   plain
                   size="small"
                   :disabled="!selectedRows.length"
@@ -259,6 +276,7 @@
 
                 <el-button
                   v-if="!isTrashed"
+                  v-perms="['product.updateStatus']"
                   plain
                   size="small"
                   :disabled="!selectedRows.length"
@@ -294,6 +312,7 @@ import XVirtualTable from "@/components/XVirtualTable/index.vue";
 import XPopperProxy from "@/components/XPopperProxy/index.vue";
 import XOperatorCell from "@/components/XOperatorCell/index.vue";
 import ExportOutlined from "~icons/ant-design/export-outlined";
+import { hasPerms } from "@/utils/auth.js";
 
 defineOptions({
   name: "ProductList"
@@ -636,8 +655,13 @@ const handleEdit = (row: Product) => {
   goProductForm(row.id);
 };
 
-/** 接收 Popover 确认删除的回调 */
-const handleDeleteConfirm = (row: { id: number }) => {
+/** 接收 XPopperProxy 确认回调：batch 表示批量删除，否则为单行删除 */
+const handleDeleteConfirm = (row: { id?: number; batch?: boolean }) => {
+  if (row.batch) {
+    handleDeleteBatch();
+    return;
+  }
+  if (!row.id) return;
   deleteProducts(row.id.toString(), isTrashedFlag.value);
 };
 
@@ -665,5 +689,11 @@ onActivated(() => {
 /* 状态分页签放在头部左侧，去掉默认下外边距 */
 .status-tabs :deep(.el-tabs__header) {
   margin: 0;
+}
+
+/* 按钮按权限隐藏后，隐藏被"孤立"的首尾分割线 */
+.operation-actions :deep(.el-divider--vertical:first-child),
+.operation-actions :deep(.el-divider--vertical:last-child) {
+  display: none;
 }
 </style>

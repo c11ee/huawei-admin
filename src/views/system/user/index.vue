@@ -33,7 +33,11 @@
           <div class="card-header flex items-center justify-between">
             <span class="text-lg font-bold">用户列表</span>
             <div class="flex items-center">
-              <el-button type="primary" :icon="Plus" @click="handleCreate"
+              <el-button
+                v-perms="['user.store']"
+                type="primary"
+                :icon="Plus"
+                @click="handleCreate"
                 >添加用户</el-button
               >
               <el-button
@@ -79,24 +83,32 @@
                   :loading="loadingStatusMap[row.id]"
                   active-text="启用"
                   inactive-text="禁用"
+                  :disabled="!hasPerms('user.updateStatus')"
                   @change="handleStatusChange($event as 0 | 1, row)"
                 />
               </template>
 
               <template #operation-default="{ row }">
-                <el-button link type="primary" @click="handleEdit(row)"
-                  >编辑</el-button
-                >
-                <el-divider direction="vertical" />
-                <el-button
-                  link
-                  type="danger"
-                  data-proxy-popover
-                  data-popover-title="确定删除此用户吗？"
-                  :data-row-data="JSON.stringify({ id: row.id })"
-                >
-                  删除
-                </el-button>
+                <div class="operation-actions inline-flex items-center">
+                  <el-button
+                    v-perms="['user.update']"
+                    link
+                    type="primary"
+                    @click="handleEdit(row)"
+                    >编辑</el-button
+                  >
+                  <el-divider direction="vertical" />
+                  <el-button
+                    v-perms="['user.destroy']"
+                    link
+                    type="danger"
+                    data-proxy-popover
+                    data-popover-title="确定删除此用户吗？"
+                    :data-row-data="JSON.stringify({ id: row.id })"
+                  >
+                    删除
+                  </el-button>
+                </div>
               </template>
             </XVirtualTable>
           </XPopperProxy>
@@ -122,6 +134,7 @@ import XVirtualTable from "@/components/XVirtualTable/index.vue";
 import XPopperProxy from "@/components/XPopperProxy/index.vue";
 import { addDialog, closeDialog } from "@/components/ReDialog";
 import UserForm from "./UserForm.vue";
+import { hasPerms } from "@/utils/auth.js";
 
 defineOptions({ name: "SystemUsers" });
 
@@ -141,7 +154,7 @@ const COLUMNS_CONFIG: any[] = [
   {
     field: "status",
     title: "状态",
-    width: 80,
+    width: 100,
     params: {
       localFilter: true,
       filterConfig: { 0: "禁用", 1: "启用" }

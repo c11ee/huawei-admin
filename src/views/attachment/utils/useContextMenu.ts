@@ -1,9 +1,12 @@
 import { nextTick, ref } from "vue";
 
 export const useContextMenu = ({
-  params
+  params,
+  canOpen
 }: {
   params: { folder_id: number };
+  /** 判断该节点是否存在可见的菜单项（权限不足时菜单项会全部隐藏），返回 false 则不弹出菜单 */
+  canOpen?: (type: "tree-folder" | "folder" | "file") => boolean;
 }) => {
   const dropdownRef = ref();
   const dropdownTriggerRef = ref();
@@ -20,6 +23,8 @@ export const useContextMenu = ({
       !item.id
     )
       return;
+
+    if (canOpen && !canOpen(type)) return;
 
     if (["folder", "tree-folder"].includes(type)) {
       dropdownEditRow.value = { id: item.id, type: "folder" };

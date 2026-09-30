@@ -24,7 +24,12 @@
       <div class="flex items-center justify-between">
         <span class="font-bold">附件列表</span>
         <div class="flex items-center gap-x-2">
-          <el-button size="small" plain @click="handleNewFolder()">
+          <el-button
+            v-perms="['folder.store']"
+            size="small"
+            plain
+            @click="handleNewFolder()"
+          >
             新建文件夹
           </el-button>
           <el-upload :http-request="handleUpload" :show-file-list="false">
@@ -56,8 +61,9 @@
                   fit="contain"
                   lazy
                 />
-                <!-- 悬停操作：放大 / 删除 -->
+                <!-- 悬停操作：放大 / 删除（两者都不可见时不展示遮罩） -->
                 <div
+                  v-if="hasHoverActions(item)"
                   class="pointer-events-none absolute inset-0 flex items-center justify-center gap-x-4 bg-black/50 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                 >
                   <el-icon
@@ -69,6 +75,7 @@
                     <ZoomIn />
                   </el-icon>
                   <el-icon
+                    v-perms="['attachment.destroy']"
                     class="pointer-events-auto cursor-pointer"
                     :size="18"
                     @click.stop="handleDelete(item)"
@@ -119,6 +126,7 @@ import {
   getName,
   isImageUrl
 } from "@/utils/attachment/common";
+import { hasPerms } from "@/utils/auth";
 import { cache } from "./cache";
 
 defineOptions({ name: "AttachmentDialog" });
@@ -216,6 +224,11 @@ const handleItemClick = async (item: AttachmentNode) => {
 
 const isSelected = (item: AttachmentNode) =>
   item.type === "file" && selectedUrls.value.has(item.file_url);
+
+/** 悬停操作是否可见：图片可放大，或有删除权限 */
+const hasHoverActions = (item: AttachmentNode) =>
+  (item.type === "file" && isImageUrl(item.file_url)) ||
+  hasPerms("attachment.destroy");
 
 /** 上传附件 */
 const { uploading, handleUpload } = useAttachmentUpload({

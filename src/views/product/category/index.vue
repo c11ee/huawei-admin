@@ -5,7 +5,11 @@
         <div class="card-header flex items-center justify-between">
           <span class="text-lg font-bold">商品分类</span>
           <div class="flex items-center">
-            <el-button type="primary" :icon="Plus" @click="handleCreateTop"
+            <el-button
+              v-perms="['category.store']"
+              type="primary"
+              :icon="Plus"
+              @click="handleCreateTop"
               >添加分类</el-button
             >
             <el-button
@@ -59,27 +63,40 @@
 
             <!-- 操作列自定义渲染 -->
             <template #operation-default="{ row }">
-              <el-button link type="primary" @click="handleAdd(row)">
-                添加
-              </el-button>
+              <div class="operation-actions inline-flex items-center">
+                <el-button
+                  v-perms="['category.store']"
+                  link
+                  type="primary"
+                  @click="handleAdd(row)"
+                >
+                  添加
+                </el-button>
 
-              <el-divider direction="vertical" />
+                <el-divider direction="vertical" />
 
-              <el-button link type="primary" @click="handleEdit(row)">
-                编辑
-              </el-button>
+                <el-button
+                  v-perms="['category.update']"
+                  link
+                  type="primary"
+                  @click="handleEdit(row)"
+                >
+                  编辑
+                </el-button>
 
-              <el-divider direction="vertical" />
+                <el-divider direction="vertical" />
 
-              <el-button
-                link
-                type="danger"
-                data-proxy-popover
-                data-popover-title="确定删除此分类吗？其子分类也会一并删除。"
-                :data-row-data="JSON.stringify({ id: row.id })"
-              >
-                删除
-              </el-button>
+                <el-button
+                  v-perms="['category.destroy']"
+                  link
+                  type="danger"
+                  data-proxy-popover
+                  data-popover-title="确定删除此分类吗？其子分类也会一并删除。"
+                  :data-row-data="JSON.stringify({ id: row.id })"
+                >
+                  删除
+                </el-button>
+              </div>
             </template>
           </XVirtualTable>
         </XPopperProxy>

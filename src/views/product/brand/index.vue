@@ -5,7 +5,11 @@
         <div class="card-header flex items-center justify-between">
           <span class="text-lg font-bold">商品品牌</span>
           <div class="flex items-center">
-            <el-button type="primary" :icon="Plus" @click="handleCreate"
+            <el-button
+              v-perms="['brand.store']"
+              type="primary"
+              :icon="Plus"
+              @click="handleCreate"
               >添加品牌</el-button
             >
             <el-button :icon="Refresh" :loading="loading" @click="fetchBrands"
@@ -50,27 +54,36 @@
                 :loading="loadingStatusMap[row.id]"
                 active-text="启用"
                 inactive-text="禁用"
+                :disabled="!hasPerms('brand.updateStatus')"
                 @change="handleStatusChange($event as 0 | 1, row)"
               />
             </template>
 
             <!-- 操作列自定义渲染 -->
             <template #operation-default="{ row }">
-              <el-button link type="primary" @click="handleEdit(row)">
-                编辑
-              </el-button>
+              <div class="operation-actions inline-flex items-center">
+                <el-button
+                  v-perms="['brand.update']"
+                  link
+                  type="primary"
+                  @click="handleEdit(row)"
+                >
+                  编辑
+                </el-button>
 
-              <el-divider direction="vertical" />
+                <el-divider direction="vertical" />
 
-              <el-button
-                link
-                type="danger"
-                data-proxy-popover
-                data-popover-title="确定删除此品牌吗？"
-                :data-row-data="JSON.stringify({ id: row.id })"
-              >
-                删除
-              </el-button>
+                <el-button
+                  v-perms="['brand.destroy']"
+                  link
+                  type="danger"
+                  data-proxy-popover
+                  data-popover-title="确定删除此品牌吗？"
+                  :data-row-data="JSON.stringify({ id: row.id })"
+                >
+                  删除
+                </el-button>
+              </div>
             </template>
 
             <!-- 分页左侧：批量操作 -->
@@ -84,24 +97,21 @@
                   条</span
                 >
 
-                <el-popconfirm
-                  title="确定删除选中的品牌吗？"
-                  placement="top-start"
-                  @confirm="handleDeleteBatch"
+                <el-button
+                  v-perms="['brand.destroy']"
+                  plain
+                  size="small"
+                  type="danger"
+                  :disabled="!selectedRows.length"
+                  data-proxy-confirm
+                  data-confirm-title="确定删除选中的品牌吗？"
+                  :data-row-data="JSON.stringify({ batch: true })"
                 >
-                  <template #reference>
-                    <el-button
-                      plain
-                      size="small"
-                      type="danger"
-                      :disabled="!selectedRows.length"
-                    >
-                      批量删除
-                    </el-button>
-                  </template>
-                </el-popconfirm>
+                  批量删除
+                </el-button>
 
                 <el-button
+                  v-perms="['brand.updateStatus']"
                   plain
                   size="small"
                   :disabled="!selectedRows.length"
@@ -111,6 +121,7 @@
                 </el-button>
 
                 <el-button
+                  v-perms="['brand.updateStatus']"
                   plain
                   size="small"
                   :disabled="!selectedRows.length"
@@ -144,6 +155,7 @@ import XVirtualTable from "@/components/XVirtualTable/index.vue";
 import XPopperProxy from "@/components/XPopperProxy/index.vue";
 import { addDialog, closeDialog } from "@/components/ReDialog";
 import BrandForm from "./BrandForm.vue";
+import { hasPerms } from "@/utils/auth.js";
 
 defineOptions({
   name: "ProductBrand"
@@ -354,8 +366,14 @@ const handleEdit = (row: Brand) => {
   openBrandDialog(row);
 };
 
-/** 接收 Popover 确认删除的回调 */
-const handleDeleteConfirm = async (row: { id: number }) => {
+/** 接收 XPopperProxy 确认回调：batch 表示批量删除，否则为单行删除 */
+const handleDeleteConfirm = async (row: { id?: number; batch?: boolean }) => {
+  if (row.batch) {
+    handleDeleteBatch();
+    return;
+  }
+  if (!row.id) return;
+
   try {
     const res = await deleteBrand(row.id);
     if (res.code === 200) {

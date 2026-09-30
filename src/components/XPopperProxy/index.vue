@@ -41,6 +41,16 @@
     </template>
   </el-popover>
 
+  <el-popconfirm
+    :visible="confirmVisible"
+    :virtual-ref="confirmTriggerRef"
+    virtual-triggering
+    placement="top"
+    :title="confirmTitle"
+    @confirm="handleConfirmConfirm"
+    @cancel="handleConfirmCancel"
+  />
+
   <el-tooltip
     :visible="tooltipVisible"
     :virtual-ref="tooltipTriggerRef"
@@ -134,6 +144,12 @@ const popoverTriggerRef = ref<HTMLElement | null>(null);
 const popoverTitle = ref("");
 const currentPopoverRow = ref<any>(null);
 
+// 确认框（el-popconfirm）：由 data-proxy-confirm 触发
+const confirmVisible = ref(false);
+const confirmTriggerRef = ref<HTMLElement | null>(null);
+const confirmTitle = ref("");
+const currentConfirmRow = ref<any>(null);
+
 const tooltipVisible = ref(false);
 const tooltipTriggerRef = ref<HTMLElement | null>(null);
 const tooltipContent = ref("");
@@ -196,6 +212,23 @@ const handleCaptureClick = (e: MouseEvent) => {
     currentPopoverRow.value = parseRowData(popoverTarget);
     popoverTriggerRef.value = popoverTarget;
     popoverVisible.value = true;
+    confirmVisible.value = false;
+    tooltipVisible.value = false;
+    return;
+  }
+
+  // 最后处理 Popconfirm 确认框触发
+  const confirmTarget = clickTarget.closest(
+    "[data-proxy-confirm]"
+  ) as HTMLElement;
+  if (confirmTarget) {
+    e.stopPropagation();
+    confirmTitle.value =
+      confirmTarget.dataset.confirmTitle || "确定执行此操作吗？";
+    currentConfirmRow.value = parseRowData(confirmTarget);
+    confirmTriggerRef.value = confirmTarget;
+    confirmVisible.value = true;
+    popoverVisible.value = false;
     tooltipVisible.value = false;
   }
 };
@@ -226,19 +259,38 @@ const handlePopoverConfirm = () => {
   emit("confirm", currentPopoverRow.value);
 };
 
+/** Popconfirm 确认回调 */
+const handleConfirmConfirm = () => {
+  confirmVisible.value = false;
+  emit("confirm", currentConfirmRow.value);
+};
+
+/** Popconfirm 取消回调 */
+const handleConfirmCancel = () => {
+  confirmVisible.value = false;
+};
+
 /** Dropdown 菜单项点击回调 */
 const handleDropdownCommand = (command: string) => {
   emit("action", { command, row: currentDropdownRow.value });
 };
 
-// 全局点击空白关闭 Popover
+// 全局点击空白关闭 Popover / Popconfirm
 const handleWindowClick = (e: MouseEvent) => {
+  const target = e.target as Node;
   if (
     popoverVisible.value &&
     popoverTriggerRef.value &&
-    !popoverTriggerRef.value.contains(e.target as Node)
+    !popoverTriggerRef.value.contains(target)
   ) {
     popoverVisible.value = false;
+  }
+  if (
+    confirmVisible.value &&
+    confirmTriggerRef.value &&
+    !confirmTriggerRef.value.contains(target)
+  ) {
+    confirmVisible.value = false;
   }
 };
 window.addEventListener("click", handleWindowClick);

@@ -5,7 +5,11 @@
         <div class="card-header flex items-center justify-between">
           <span class="text-lg font-bold">权限列表</span>
           <div class="flex items-center">
-            <el-button type="primary" :icon="Plus" @click="handleCreateTop"
+            <el-button
+              v-perms="['permissions.store']"
+              type="primary"
+              :icon="Plus"
+              @click="handleCreateTop"
               >添加顶级权限</el-button
             >
             <el-button
@@ -48,27 +52,40 @@
 
             <!-- 操作列自定义渲染 -->
             <template #operation-default="{ row }">
-              <el-button link type="primary" @click="handleAdd(row)">
-                添加
-              </el-button>
+              <div class="operation-actions inline-flex items-center">
+                <el-button
+                  v-perms="['permissions.store']"
+                  link
+                  type="primary"
+                  @click="handleAdd(row)"
+                >
+                  添加
+                </el-button>
 
-              <el-divider direction="vertical" />
+                <el-divider direction="vertical" />
 
-              <el-button link type="primary" @click="handleEdit(row)">
-                编辑
-              </el-button>
+                <el-button
+                  v-perms="['permissions.update']"
+                  link
+                  type="primary"
+                  @click="handleEdit(row)"
+                >
+                  编辑
+                </el-button>
 
-              <el-divider direction="vertical" />
+                <el-divider direction="vertical" />
 
-              <el-button
-                link
-                type="danger"
-                data-proxy-popover
-                data-popover-title="确定删除此权限吗？"
-                :data-row-data="JSON.stringify({ id: row.id })"
-              >
-                删除
-              </el-button>
+                <el-button
+                  v-perms="['permissions.destroy']"
+                  link
+                  type="danger"
+                  data-proxy-popover
+                  data-popover-title="确定删除此权限吗？"
+                  :data-row-data="JSON.stringify({ id: row.id })"
+                >
+                  删除
+                </el-button>
+              </div>
             </template>
           </XVirtualTable>
         </XPopperProxy>

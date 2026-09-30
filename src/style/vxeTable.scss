@@ -27,3 +27,9 @@
     }
   }
 }
+
+/* 按钮按权限隐藏后，隐藏被"孤立"的首尾分割线 */
+.operation-actions .el-divider--vertical:first-child,
+.operation-actions .el-divider--vertical:last-child {
+  display: none;
+}

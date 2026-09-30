@@ -14,6 +14,7 @@ import {
 import { TableV2SortOrder } from "element-plus";
 import { useRoute } from "vue-router";
 import { copyText } from "@/utils/tool";
+import { hasPerms } from "@/utils/auth";
 
 import { useFetch } from "./utils/useFetch";
 import { useAction } from "./utils/useAction";
@@ -65,7 +66,14 @@ const {
   dropdownEditRow,
   handleRightClick,
   handleDropdownVisibleChange
-} = useContextMenu({ params });
+} = useContextMenu({
+  params,
+  // 文件夹类只有「新增文件夹」「删除」，两者都无权限时菜单无可见项，不弹出
+  canOpen: type =>
+    type === "file" ||
+    hasPerms("folder.store") ||
+    hasPerms("attachment.destroy")
+});
 
 // --- 上传 ---
 const {
@@ -260,7 +268,12 @@ watch(
           <div class="card-header flex items-center justify-between">
             <span class="text-lg font-bold"> 附件管理 </span>
             <div class="flex items-center gap-x-3">
-              <el-button plain size="small" @click="handleNewFolder()">
+              <el-button
+                v-perms="['folder.store']"
+                plain
+                size="small"
+                @click="handleNewFolder()"
+              >
                 新建文件夹
               </el-button>
               <el-upload
@@ -355,6 +368,7 @@ watch(
                           <Download />
                         </el-icon>
                         <el-icon
+                          v-perms="['attachment.destroy']"
                           class="cursor-pointer text-xs"
                           @click.stop="handleDelete(item)"
                         >
@@ -405,13 +419,19 @@ watch(
               @confirm="handleDeleteBatch()"
             >
               <template #reference>
-                <el-button plain size="small" class="ml-4!">
+                <el-button
+                  v-perms="['attachment.destroy']"
+                  plain
+                  size="small"
+                  class="ml-4!"
+                >
                   {{ params.folder_id != -1 ? "批量删除" : "彻底删除" }}
                 </el-button>
               </template>
             </el-popconfirm>
 
             <el-button
+              v-perms="['attachment.updateFolderId']"
               plain
               size="small"
               class="ml-4!"
@@ -422,6 +442,7 @@ watch(
             </el-button>
 
             <el-button
+              v-perms="['attachment.restore']"
               plain
               size="small"
               class="ml-4!"
@@ -476,7 +497,10 @@ watch(
         <el-dropdown-menu>
           <el-dropdown-item
             :icon="FolderAdd"
-            v-if="['folder', 'tree-folder'].includes(dropdownEditRow.type)"
+            v-if="
+              ['folder', 'tree-folder'].includes(dropdownEditRow.type) &&
+              hasPerms('folder.store')
+            "
             @click="handleNewFolder(dropdownEditRow.id)"
             >新增文件夹</el-dropdown-item
           >
@@ -499,7 +523,7 @@ watch(
           >
           <el-dropdown-item
             :icon="Delete"
-            v-if="true"
+            v-if="hasPerms('attachment.destroy')"
             @click="handleDelete(dropdownEditRow)"
             >删除</el-dropdown-item
           >

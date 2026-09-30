@@ -32,7 +32,11 @@
         <div class="card-header flex items-center justify-between">
           <span class="text-lg font-bold">规格模板</span>
           <div class="flex items-center">
-            <el-button type="primary" :icon="Plus" @click="handleCreate"
+            <el-button
+              v-perms="['spec-template.store']"
+              type="primary"
+              :icon="Plus"
+              @click="handleCreate"
               >添加规格模板</el-button
             >
             <el-button
@@ -88,6 +92,7 @@
                 :loading="loadingStatusMap[row.id]"
                 active-text="启用"
                 inactive-text="禁用"
+                :disabled="!hasPerms('spec-template.updateStatus')"
                 @change="handleStatusChange($event as 0 | 1, row)"
               />
             </template>
@@ -104,21 +109,29 @@
 
             <!-- 操作列自定义渲染 -->
             <template #operation-default="{ row }">
-              <el-button link type="primary" @click="handleEdit(row)">
-                编辑
-              </el-button>
+              <div class="operation-actions inline-flex items-center">
+                <el-button
+                  v-perms="['spec-template.update']"
+                  link
+                  type="primary"
+                  @click="handleEdit(row)"
+                >
+                  编辑
+                </el-button>
 
-              <el-divider direction="vertical" />
+                <el-divider direction="vertical" />
 
-              <el-button
-                link
-                type="danger"
-                data-proxy-popover
-                data-popover-title="确定删除此规格模板吗？"
-                :data-row-data="JSON.stringify({ id: row.id })"
-              >
-                删除
-              </el-button>
+                <el-button
+                  v-perms="['spec-template.destroy']"
+                  link
+                  type="danger"
+                  data-proxy-popover
+                  data-popover-title="确定删除此规格模板吗？"
+                  :data-row-data="JSON.stringify({ id: row.id })"
+                >
+                  删除
+                </el-button>
+              </div>
             </template>
 
             <!-- 分页左侧：批量操作 -->
@@ -132,24 +145,21 @@
                   条</span
                 >
 
-                <el-popconfirm
-                  title="确定删除选中的规格模板吗？"
-                  placement="top-start"
-                  @confirm="handleDeleteBatch"
+                <el-button
+                  v-perms="['spec-template.destroy']"
+                  plain
+                  size="small"
+                  type="danger"
+                  :disabled="!selectedRows.length"
+                  data-proxy-confirm
+                  data-confirm-title="确定删除选中的规格模板吗？"
+                  :data-row-data="JSON.stringify({ batch: true })"
                 >
-                  <template #reference>
-                    <el-button
-                      plain
-                      size="small"
-                      type="danger"
-                      :disabled="!selectedRows.length"
-                    >
-                      批量删除
-                    </el-button>
-                  </template>
-                </el-popconfirm>
+                  批量删除
+                </el-button>
 
                 <el-button
+                  v-perms="['spec-template.updateStatus']"
                   plain
                   size="small"
                   :disabled="!selectedRows.length"
@@ -159,6 +169,7 @@
                 </el-button>
 
                 <el-button
+                  v-perms="['spec-template.updateStatus']"
                   plain
                   size="small"
                   :disabled="!selectedRows.length"
@@ -194,6 +205,7 @@ import XPopperProxy from "@/components/XPopperProxy/index.vue";
 import XOperatorCell from "@/components/XOperatorCell/index.vue";
 import { addDialog, closeDialog } from "@/components/ReDialog";
 import SpecTemplateForm from "./SpecTemplateForm.vue";
+import { hasPerms } from "@/utils/auth.js";
 
 defineOptions({
   name: "ProductSpecTemplate"
@@ -446,8 +458,14 @@ const handleEdit = (row: SpecTemplate) => {
   openTemplateDialog(row);
 };
 
-/** 接收 Popover 确认删除的回调 */
-const handleDeleteConfirm = async (row: { id: number }) => {
+/** 接收 XPopperProxy 确认回调：batch 表示批量删除，否则为单行删除 */
+const handleDeleteConfirm = async (row: { id?: number; batch?: boolean }) => {
+  if (row.batch) {
+    handleDeleteBatch();
+    return;
+  }
+  if (!row.id) return;
+
   try {
     const res = await deleteSpecTemplate(row.id);
     if (res.code === 200) {

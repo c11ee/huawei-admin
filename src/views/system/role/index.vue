@@ -33,7 +33,11 @@
           <div class="card-header flex items-center justify-between">
             <span class="text-lg font-bold">角色列表</span>
             <div class="flex items-center">
-              <el-button type="primary" :icon="Plus" @click="handleCreate"
+              <el-button
+                v-perms="['role.store']"
+                type="primary"
+                :icon="Plus"
+                @click="handleCreate"
                 >添加角色</el-button
               >
               <el-button
@@ -65,21 +69,34 @@
                   :loading="loadingStatusMap[row.id]"
                   active-text="启用"
                   inactive-text="禁用"
+                  :disabled="!hasPerms('role.updateStatus')"
                   @change="handleStatusChange($event as 0 | 1, row)"
                 />
               </template>
 
               <template #operation-default="{ row }">
-                <div v-if="row.name !== '超级管理员'">
-                  <el-button link type="primary" @click="handleEdit(row)"
+                <div
+                  v-if="row.name !== '超级管理员'"
+                  class="operation-actions inline-flex items-center"
+                >
+                  <el-button
+                    v-perms="['role.update']"
+                    link
+                    type="primary"
+                    @click="handleEdit(row)"
                     >编辑</el-button
                   >
                   <el-divider direction="vertical" />
-                  <el-button link type="primary" @click="handlePermission(row)"
+                  <el-button
+                    v-perms="['role.update']"
+                    link
+                    type="primary"
+                    @click="handlePermission(row)"
                     >权限</el-button
                   >
                   <el-divider direction="vertical" />
                   <el-button
+                    v-perms="['role.destroy']"
                     link
                     type="danger"
                     data-proxy-popover
@@ -189,6 +206,7 @@ import { addDialog, closeDialog } from "@/components/ReDialog";
 import RoleForm from "./RoleForm.vue";
 import Close from "~icons/ep/close";
 import Check from "~icons/ep/check";
+import { hasPerms } from "@/utils/auth.js";
 import { useResizeObserver } from "@vueuse/core";
 
 defineOptions({ name: "SystemRoles" });
