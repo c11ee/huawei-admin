@@ -20,6 +20,8 @@ export type Product = {
   spu_code: string;
   /** 商品名称 */
   product_name: string;
+  /** 商品简短名称 */
+  product_short_name: string;
   /** 商品描述 */
   product_description: string;
   /** 品牌ID */
@@ -154,6 +156,8 @@ export type ProductSpuPayload = {
   id?: number;
   /** 商品名称 */
   product_name: string;
+  /** 商品简短名称 */
+  product_short_name: string;
   /** 商品描述 */
   product_description: string;
   /** 品牌ID */
@@ -231,6 +235,10 @@ export const getProducts = (params: {
   status?: ProductStatus;
   /** 是否查看回收站商品：0=否 1=是 */
   show_trashed?: YesNoFlag;
+  /** 分类筛选：分类ID数组 */
+  category_ids?: number[];
+  /** 排序：形如 created_at:desc / updated_at:asc，不传表示后端默认排序 */
+  order_by?: string;
 }) => {
   return http.request<PageData<Product[]> & { counts: ProductListCounts }>(
     "get",

@@ -48,6 +48,18 @@
                     show-word-limit
                   />
                 </el-form-item>
+                <el-form-item
+                  class="info-grid-full"
+                  label="产品简短名称"
+                  prop="product_short_name"
+                >
+                  <el-input
+                    v-model="formData.product_short_name"
+                    placeholder="请输入产品简短名称"
+                    maxlength="100"
+                    show-word-limit
+                  />
+                </el-form-item>
 
                 <el-form-item
                   class="info-grid-full"

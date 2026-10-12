@@ -6,6 +6,7 @@ import {
   nextTick,
   defineComponent,
   getCurrentInstance,
+  onBeforeUnmount,
   watch
 } from "vue";
 import { cloneDeep, getKeyList } from "@pureadmin/utils";
@@ -135,15 +136,20 @@ export default defineComponent({
       emitColumnsChange();
     }
 
-    // 列展示拖拽排序
+    // 列展示拖拽排序（实例复用，避免每次 hover 都创建 Sortable 导致监听器泄漏）
+    let sortableInstance: Sortable | null = null;
+
     const rowDrop = (event: { preventDefault: () => void }) => {
       event.preventDefault();
       nextTick(() => {
         const wrapper: HTMLElement = (
           instance?.proxy?.$refs[`GroupRef${unref(props.tableKey)}`] as any
-        ).$el.firstElementChild;
+        )?.$el?.firstElementChild;
 
-        Sortable.create(wrapper, {
+        // 已绑定的挂载节点未变化时直接复用
+        if (!wrapper || sortableInstance?.el === wrapper) return;
+        sortableInstance?.destroy();
+        sortableInstance = Sortable.create(wrapper, {
           animation: 300,
           handle: ".drag-btn",
           onMove(evt) {
@@ -187,6 +193,11 @@ export default defineComponent({
         });
       });
     };
+
+    onBeforeUnmount(() => {
+      sortableInstance?.destroy();
+      sortableInstance = null;
+    });
 
     const rendTippyProps = (content: string) => {
       return {

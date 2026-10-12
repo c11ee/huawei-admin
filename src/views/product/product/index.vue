@@ -1,5 +1,32 @@
 <template>
-  <div class="h-full w-full flex flex-col gap-y-3">
+  <div
+    class="h-full w-full grid grid-cols-[16rem_1fr] grid-rows-[auto_1fr] gap-3"
+  >
+    <!-- 左侧分类树：勾选分类后按 category_ids 过滤商品列表 -->
+    <el-card shadow="never" class="category-card row-span-2">
+      <template #header>
+        <div class="flex items-center justify-between">
+          <span class="font-medium">商品分类</span>
+        </div>
+      </template>
+      <div
+        ref="categoryTreeWrapRef"
+        v-loading="categoryLoading"
+        class="flex-1 min-h-0"
+      >
+        <el-tree-v2
+          ref="categoryTreeRef"
+          :data="categoryTree"
+          :props="categoryTreeProps"
+          :height="categoryTreeHeight"
+          :default-expanded-keys="categoryExpandedKeys"
+          :empty-text="categoryLoading ? '加载中...' : '暂无分类'"
+          show-checkbox
+          @check="handleCategoryCheck"
+        />
+      </div>
+    </el-card>
+
     <el-card shadow="never" class="shrink-0">
       <el-form
         :inline="true"
@@ -76,6 +103,7 @@
             :data="productList"
             :pagination="listParams"
             @pagination-change="handlePaginationChange"
+            @sort-change="handleSortChange"
             @update:selectedRows="handleSelectionChange"
           >
             <!-- 主图列自定义渲染 -->
@@ -86,7 +114,8 @@
                   :src="row.default_sku_image_url"
                   class="size-8"
                   fit="cover"
-                  :preview-src-list="[row.default_sku_image_url]"
+                  lazy
+                  :preview-src-list="previewList(row)"
                   preview-teleported
                 />
                 <span v-else class="text-(--el-text-color-placeholder)">-</span>
@@ -155,7 +184,7 @@
                 :loading="loadingStatusMap[row.id]"
                 active-text="上架"
                 inactive-text="下架"
-                :disabled="!hasPerms('product.updateStatus')"
+                :disabled="!canUpdateStatus"
                 @change="handleStatusChange($event as ProductStatus, row)"
               />
             </template>
@@ -308,11 +337,13 @@ import {
   type ProductStatus,
   type YesNoFlag
 } from "@/api/product";
+import { getCategories, type Category } from "@/api/category";
 import XVirtualTable from "@/components/XVirtualTable/index.vue";
 import XPopperProxy from "@/components/XPopperProxy/index.vue";
 import XOperatorCell from "@/components/XOperatorCell/index.vue";
 import ExportOutlined from "~icons/ant-design/export-outlined";
 import { hasPerms } from "@/utils/auth.js";
+import { useResizeObserver } from "@vueuse/core";
 
 defineOptions({
   name: "ProductList"
@@ -328,6 +359,37 @@ const tableRef = ref();
 const loadingStatusMap = ref<Record<number, boolean>>({});
 /** 首次激活由 onMounted 请求，避免重复加载 */
 let isFirstActivated = true;
+
+/** 分类树数据 / 加载状态 */
+const categoryTree = ref<Category[]>([]);
+const categoryLoading = ref(false);
+const categoryTreeRef = ref();
+const categoryTreeWrapRef = ref<HTMLDivElement>();
+/** 已勾选的分类ID（父分类勾选时含其全部后代） */
+const selectedCategoryIds = ref<number[]>([]);
+
+/** el-tree-v2 配置：value 为节点唯一键 */
+const categoryTreeProps = {
+  value: "id",
+  label: "category_name",
+  children: "children"
+};
+
+/** 分类树容器高度：el-tree-v2 需固定高度才能虚拟滚动，避免撑开页面出现滚动条 */
+const categoryTreeHeight = ref(400);
+
+/** 默认展开全部分类（el-tree-v2 无 default-expand-all，用全部节点ID展开） */
+const categoryExpandedKeys = computed(() => {
+  const keys: number[] = [];
+  const walk = (nodes: Category[]) => {
+    nodes.forEach(node => {
+      keys.push(node.id);
+      if (node.children?.length) walk(node.children);
+    });
+  };
+  walk(categoryTree.value);
+  return keys;
+});
 
 /** 状态分页签名称：all 表示全部，其余与后端 counts 的字段一致 */
 type ProductTabName = "all" | keyof ProductListCounts;
@@ -373,6 +435,9 @@ const isTrashed = computed(() => activeTab.value === "trashed");
 /** 回收站分页签对应的是否标记：0=否 1=是 */
 const isTrashedFlag = computed<YesNoFlag>(() => (isTrashed.value ? 1 : 0));
 
+/** 是否具备上下架权限：缓存一次，避免在每行状态列渲染时重复调用 hasPerms */
+const canUpdateStatus = computed(() => hasPerms("product.updateStatus"));
+
 /** 状态文案：0=草稿 1=上架 2=下架 */
 const statusTextMap: Record<ProductStatus, string> = {
   0: "草稿",
@@ -385,7 +450,9 @@ const listParams = ref({
   page: 1,
   limit: 100,
   total: 0,
-  keyword: ""
+  keyword: "",
+  /** 排序：形如 created_at:desc，空字符串表示后端默认排序 */
+  order_by: ""
 });
 
 /** 列配置 */
@@ -462,7 +529,8 @@ const columnsConfig = ref<Column[]>([
   {
     field: "created_at",
     title: "创建时间",
-    width: 180
+    width: 180,
+    sortable: true
   },
   {
     field: "updater",
@@ -473,7 +541,8 @@ const columnsConfig = ref<Column[]>([
   {
     field: "updated_at",
     title: "更新时间",
-    width: 180
+    width: 180,
+    sortable: true
   },
   {
     field: "operation",
@@ -497,6 +566,17 @@ const priceText = (row: Product) => {
   return `¥${row.default_sku_sale_price}`;
 };
 
+/** 主图放大预览列表：按行缓存数组引用，避免每次渲染新建数组触发 el-image 更新 */
+const previewListCache = new WeakMap<Product, string[]>();
+const previewList = (row: Product) => {
+  let list = previewListCache.get(row);
+  if (!list) {
+    list = [row.default_sku_image_url as string];
+    previewListCache.set(row, list);
+  }
+  return list;
+};
+
 /** 获取商品列表 */
 const fetchProducts = async () => {
   loading.value = true;
@@ -505,7 +585,9 @@ const fetchProducts = async () => {
     const res = await getProducts({
       ...listParams.value,
       status: tab?.status,
-      show_trashed: tab?.show_trashed
+      show_trashed: tab?.show_trashed,
+      category_ids: selectedCategoryIds.value,
+      order_by: listParams.value.order_by || undefined
     });
     if (res.code === 200) {
       productList.value = res.data;
@@ -517,6 +599,37 @@ const fetchProducts = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+/** 获取分类树 */
+const fetchCategoryTree = async () => {
+  categoryLoading.value = true;
+  try {
+    const res = await getCategories();
+    if (res.code === 200) {
+      categoryTree.value = res.data;
+    }
+  } catch (error) {
+    console.error("获取分类列表失败:", error);
+  } finally {
+    categoryLoading.value = false;
+  }
+};
+
+/** 勾选分类：勾选父分类时 el-tree 会联动其全部后代，取其ID数组过滤列表 */
+const handleCategoryCheck = () => {
+  selectedCategoryIds.value = (categoryTreeRef.value?.getCheckedKeys() ||
+    []) as number[];
+  listParams.value.page = 1;
+  fetchProducts();
+};
+
+/** 重置分类筛选 */
+const handleCategoryReset = () => {
+  categoryTreeRef.value?.setCheckedKeys([]);
+  selectedCategoryIds.value = [];
+  listParams.value.page = 1;
+  fetchProducts();
 };
 
 /** 解析当前列表页地址（携带分页签参数）：href 用于写回地址栏，fullPath 用于返回时的 redirect */
@@ -549,6 +662,13 @@ const handleReset = () => {
 /** 分页变化 */
 const handlePaginationChange = (pagination: typeof listParams.value) => {
   listParams.value = { ...listParams.value, ...pagination };
+  fetchProducts();
+};
+
+/** 排序变化：orderBy 形如 created_at:desc，空字符串表示取消排序 */
+const handleSortChange = ({ orderBy }: { orderBy: string }) => {
+  listParams.value.order_by = orderBy;
+  listParams.value.page = 1;
   fetchProducts();
 };
 
@@ -666,7 +786,16 @@ const handleDeleteConfirm = (row: { id?: number; batch?: boolean }) => {
 };
 
 onMounted(() => {
+  fetchCategoryTree();
   fetchProducts();
+
+  // 根据容器实际高度设置虚拟树高度，保证在卡片内部滚动而非撑开页面
+  if (categoryTreeWrapRef.value) {
+    useResizeObserver(categoryTreeWrapRef, entries => {
+      const { height } = entries[0].contentRect;
+      categoryTreeHeight.value = height;
+    });
+  }
 });
 
 /** 从添加/编辑页面返回后刷新列表 */
@@ -680,6 +809,26 @@ onActivated(() => {
 </script>
 
 <style scoped>
+/* 左侧分类树卡片：整体纵向布局，内容区可滚动 */
+.category-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.category-card :deep(.el-card__header) {
+  flex-shrink: 0;
+  padding: 12px 16px;
+}
+
+.category-card :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 8px;
+  overflow: hidden;
+}
+
 /* 卡片头部：去掉下边框与左内距，分隔线改由 tabs 自带的下划线提供 */
 .pager-card :deep(.el-card__header) {
   padding-bottom: 0;

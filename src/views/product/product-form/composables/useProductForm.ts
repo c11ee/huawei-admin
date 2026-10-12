@@ -62,6 +62,7 @@ export function useProductForm() {
 
   const formData = reactive({
     product_name: "",
+    product_short_name: "",
     product_description: "",
     brand_id: undefined as number | undefined,
     spec_template_id: null as number | null,
@@ -218,6 +219,7 @@ export function useProductForm() {
         // 编辑时提交 SPU 主键ID，新增时为 undefined（不会出现在请求体中）
         id: spuId.value,
         product_name: formData.product_name.trim(),
+        product_short_name: formData.product_short_name.trim(),
         product_description: formData.product_description.trim(),
         brand_id: formData.brand_id as number,
         // 未选择时统一提交 null（后端未设置时详情接口会返回 0）
@@ -269,6 +271,7 @@ export function useProductForm() {
     spuId.value = detail.id;
 
     formData.product_name = detail.product_name ?? "";
+    formData.product_short_name = detail.product_short_name ?? "";
     formData.product_description = detail.product_description ?? "";
     formData.brand_id = detail.brand_id ?? undefined;
     // 后端未设置规格模板时详情返回 0，这里统一按「未选择」处理（否则下拉框会显示 0）
