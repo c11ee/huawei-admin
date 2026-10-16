@@ -4,6 +4,9 @@ import { Timestamped } from "./types/common";
 /** 分类状态：0=禁用 1=启用 */
 export type CategoryStatus = 0 | 1;
 
+/** 是否在首页展示：0=否 1=是 */
+export type CategoryIsHome = 0 | 1;
+
 /** 分类数据结构 */
 export type Category = {
   id: number;
@@ -15,6 +18,8 @@ export type Category = {
   icon: string;
   /** 状态：0=禁用 1=启用 */
   status: CategoryStatus;
+  /** 是否在首页展示：0=否 1=是 */
+  is_home: CategoryIsHome;
   /** 排序值，越小越靠前 */
   sort: number;
   children?: Category[];

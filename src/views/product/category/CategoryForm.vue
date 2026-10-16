@@ -48,6 +48,17 @@
       />
     </el-form-item>
 
+    <el-form-item label="首页展示" prop="is_home">
+      <el-switch
+        v-model="formData.is_home"
+        inline-prompt
+        :active-value="1"
+        :inactive-value="0"
+        active-text="展示"
+        inactive-text="隐藏"
+      />
+    </el-form-item>
+
     <el-form-item label="排序" prop="sort">
       <el-input-number
         v-model="formData.sort"
@@ -62,7 +73,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
-import type { Category, CategoryStatus } from "@/api/category";
+import type { Category, CategoryIsHome, CategoryStatus } from "@/api/category";
 import XAttachmentPicker from "@/components/XAttachmentPicker/index.vue";
 
 interface Props {
@@ -88,6 +99,7 @@ const formData = reactive({
   parent_id: (props.row?.parent_id ?? props.defaultParentId ?? 0) as number,
   icon: props.row?.icon ?? "",
   status: (props.row?.status ?? 1) as CategoryStatus,
+  is_home: (props.row?.is_home ?? 0) as CategoryIsHome,
   sort: props.row?.sort ?? 0
 });
 

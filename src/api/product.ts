@@ -285,3 +285,17 @@ export const restoreProduct = (ids: string) => {
     data: { ids }
   });
 };
+
+/**
+ * 批量修改商品分类
+ * @param is_override 分类处理方式：1=覆盖原有分类 0=追加到原有分类
+ */
+export const updateProductCategory = (
+  ids: number[],
+  category_ids: number[],
+  is_override: YesNoFlag
+) => {
+  return http.request<ApiResponse<[]>>("put", "/v1/product/update-category", {
+    data: { ids, category_ids, is_override }
+  });
+};

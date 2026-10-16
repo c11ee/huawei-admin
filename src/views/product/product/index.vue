@@ -294,6 +294,17 @@
 
                 <el-button
                   v-if="!isTrashed"
+                  v-perms="['product.updateCategory']"
+                  plain
+                  size="small"
+                  :disabled="!selectedRows.length"
+                  @click="handleBatchCategory"
+                >
+                  批量编辑分类
+                </el-button>
+
+                <el-button
+                  v-if="!isTrashed"
                   v-perms="['product.updateStatus']"
                   plain
                   size="small"
@@ -323,13 +334,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onActivated } from "vue";
+import { ref, computed, onMounted, onActivated, h } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElRadioButton, ElRadioGroup, ElTreeV2 } from "element-plus";
 import { Refresh, Plus, Search } from "@element-plus/icons-vue";
 import {
   getProducts,
   updateProductStatus,
+  updateProductCategory,
   deleteProduct,
   restoreProduct,
   type Product,
@@ -341,6 +353,7 @@ import { getCategories, type Category } from "@/api/category";
 import XVirtualTable from "@/components/XVirtualTable/index.vue";
 import XPopperProxy from "@/components/XPopperProxy/index.vue";
 import XOperatorCell from "@/components/XOperatorCell/index.vue";
+import { addDialog } from "@/components/ReDialog";
 import ExportOutlined from "~icons/ant-design/export-outlined";
 import { hasPerms } from "@/utils/auth.js";
 import { useResizeObserver } from "@vueuse/core";
@@ -357,6 +370,8 @@ const productList = ref<Product[]>([]);
 const selectedRows = ref<Product[]>([]);
 const tableRef = ref();
 const loadingStatusMap = ref<Record<number, boolean>>({});
+/** 批量编辑分类弹窗内的虚拟树实例，用于读取勾选结果 */
+let batchCategoryTree: any = null;
 /** 首次激活由 onMounted 请求，避免重复加载 */
 let isFirstActivated = true;
 
@@ -733,6 +748,82 @@ const handleBatchStatus = async (status: ProductStatus) => {
   } catch (error) {
     console.error("批量更新商品状态失败:", error);
   }
+};
+
+/** 打开批量编辑分类弹窗 */
+const handleBatchCategory = () => {
+  if (!selectedRows.value.length) return;
+
+  /** 分类处理方式：1=覆盖原有分类 0=追加到原有分类 */
+  const isOverride = ref<YesNoFlag>(1);
+
+  addDialog({
+    title: "批量编辑分类",
+    width: "480px",
+    appendToBody: true,
+    // 关闭即销毁内容，保证每次打开树的勾选状态都是空的
+    destroyOnClose: true,
+    closeOnClickModal: false,
+    sureBtnLoading: true,
+    contentRenderer: () =>
+      h("div", { class: "flex flex-col gap-y-3" }, [
+        h(
+          ElRadioGroup,
+          {
+            modelValue: isOverride.value,
+            "onUpdate:modelValue": (val: YesNoFlag) => {
+              isOverride.value = val;
+            }
+          },
+          {
+            default: () => [
+              h(ElRadioButton, { value: 1 }, () => "覆盖原有分类"),
+              h(ElRadioButton, { value: 0 }, () => "追加到原有分类")
+            ]
+          }
+        ),
+        h(ElTreeV2, {
+          data: categoryTree.value,
+          props: categoryTreeProps,
+          height: 300,
+          showCheckbox: true,
+          defaultExpandedKeys: categoryExpandedKeys.value,
+          emptyText: categoryLoading.value ? "加载中..." : "暂无分类",
+          ref: (el: any) => {
+            batchCategoryTree = el;
+          }
+        })
+      ]),
+    beforeSure: async (done, { closeLoading }) => {
+      const category_ids = (batchCategoryTree?.getCheckedKeys() ||
+        []) as number[];
+      if (!category_ids.length) {
+        ElMessage.warning("请至少选择一个分类");
+        closeLoading();
+        return;
+      }
+
+      try {
+        const ids = selectedRows.value.map(row => row.id);
+        const res = await updateProductCategory(
+          ids,
+          category_ids,
+          isOverride.value
+        );
+        if (res.code === 200) {
+          ElMessage.success(res.msg || "操作成功");
+          tableRef.value?.clearCheckboxRow();
+          fetchProducts();
+          done();
+        } else {
+          closeLoading();
+        }
+      } catch (error) {
+        console.error("批量编辑分类失败:", error);
+        closeLoading();
+      }
+    }
+  });
 };
 
 /** 删除商品：ids 支持单个ID或逗号分隔的多个ID，force_delete 为 1 时彻底删除 */

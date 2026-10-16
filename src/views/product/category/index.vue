@@ -61,6 +61,20 @@
               />
             </template>
 
+            <!-- 首页展示列自定义渲染 -->
+            <template #is_home-default="{ row }">
+              <el-switch
+                :model-value="row.is_home"
+                :active-value="1"
+                :inactive-value="0"
+                inline-prompt
+                :loading="loadingHomeMap[row.id]"
+                active-text="展示"
+                inactive-text="隐藏"
+                @change="handleHomeChange($event as CategoryIsHome, row)"
+              />
+            </template>
+
             <!-- 操作列自定义渲染 -->
             <template #operation-default="{ row }">
               <div class="operation-actions inline-flex items-center">
@@ -115,6 +129,7 @@ import {
   updateCategory,
   deleteCategory,
   type Category,
+  type CategoryIsHome,
   type CategoryStatus
 } from "@/api/category";
 import XVirtualTable from "@/components/XVirtualTable/index.vue";
@@ -130,6 +145,7 @@ const loading = ref(false);
 const categoryTree = ref<Category[]>([]);
 const tableRef = ref();
 const loadingStatusMap = ref<Record<number, boolean>>({});
+const loadingHomeMap = ref<Record<number, boolean>>({});
 
 /** 列配置 */
 const columnsConfig = ref<Column[]>([
@@ -155,6 +171,12 @@ const columnsConfig = ref<Column[]>([
       localFilter: true,
       filterConfig: { 0: "禁用", 1: "启用" }
     }
+  },
+  {
+    field: "is_home",
+    title: "首页展示",
+    width: 100,
+    slots: { default: "is_home-default" }
   },
   {
     field: "sort",
@@ -211,6 +233,7 @@ const handleStatusChange = async (status: CategoryStatus, row: Category) => {
       parent_id: row.parent_id,
       icon: row.icon,
       sort: row.sort,
+      is_home: row.is_home,
       status
     });
     if (res.code === 200) {
@@ -222,6 +245,29 @@ const handleStatusChange = async (status: CategoryStatus, row: Category) => {
     console.error("更新分类状态失败:", error);
   } finally {
     loadingStatusMap.value[row.id] = false;
+  }
+};
+
+/** 更新分类是否在首页展示 */
+const handleHomeChange = async (is_home: CategoryIsHome, row: Category) => {
+  try {
+    loadingHomeMap.value[row.id] = true;
+    const res = await updateCategory(row.id, {
+      category_name: row.category_name,
+      parent_id: row.parent_id,
+      icon: row.icon,
+      sort: row.sort,
+      status: row.status,
+      is_home
+    });
+    if (res.code === 200) {
+      ElMessage.success(res.msg || "操作成功");
+      row.is_home = is_home;
+    }
+  } catch (error) {
+    console.error("更新首页展示状态失败:", error);
+  } finally {
+    loadingHomeMap.value[row.id] = false;
   }
 };
 
