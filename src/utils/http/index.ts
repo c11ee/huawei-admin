@@ -49,8 +49,12 @@ class PureHttp {
 
   /** 重连原始请求 */
   private static retryOriginalRequest(config: PureHttpRequestConfig) {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
       PureHttp.requests.push((token: string) => {
+        if (!token) {
+          reject(new Error("刷新 token 失败"));
+          return;
+        }
         config.headers["Authorization"] = formatToken(token);
         resolve(config);
       });
@@ -74,10 +78,9 @@ class PureHttp {
         config.url =
           import.meta.env.VITE_API_BASE_URL + "admin" + config.url;
 
-        // 刷新token接口
+        // 刷新token接口，其 Authorization 已由 refreshTokenApi 传入 refresh_token，
+        // 这里直接放行，避免走下方过期判断造成死循环
         if (config.url.endsWith("/refresh-token")) {
-          const data = getToken();
-          config.headers["Authorization"] = formatToken(data.refresh_token);
           return config;
         }
         /** 请求白名单，放置一些不需要`token`的接口（通过设置请求白名单，防止`token`过期后再请求造成的死循环问题） */
@@ -103,6 +106,12 @@ class PureHttp {
                         const token = res.access_token;
                         PureHttp.requests.forEach(cb => cb(token));
                         PureHttp.requests = [];
+                      })
+                      .catch(() => {
+                        // 刷新失败，结束挂起中的请求并退出登录
+                        PureHttp.requests.forEach(cb => cb(""));
+                        PureHttp.requests = [];
+                        useUserStoreHook().logOut();
                       })
                       .finally(() => {
                         PureHttp.isRefreshing = false;

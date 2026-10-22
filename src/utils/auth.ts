@@ -26,12 +26,14 @@ export function getToken(): TokenResult {
  * 将`accessToken`、`expires`、`refreshToken`这三条信息放在key值为authorized-token的cookie里（过期自动销毁）
  */
 export function setToken(data: TokenResult) {
-  const { expires_at } = data;
+  const { refresh_expires_at } = data;
   const { isRemembered, loginDay } = useUserStoreHook();
   const cookieString = JSON.stringify(data);
 
+  // cookie 的存活时间取长期 token 的过期时间，
+  // 避免使用短期 token 的过期时间导致 refresh_token 被一起销毁
   Cookies.set(TokenKey, cookieString, {
-    expires: new Date(expires_at * 1000)
+    expires: new Date(refresh_expires_at * 1000)
   });
 
   Cookies.set(

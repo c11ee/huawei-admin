@@ -14,7 +14,13 @@ import {
   refreshTokenApi
 } from "@/api/user";
 import { useMultiTagsStoreHook } from "./multiTags";
-import { setToken, removeToken, userKey, permissionKey } from "@/utils/auth";
+import {
+  setToken,
+  getToken,
+  removeToken,
+  userKey,
+  permissionKey
+} from "@/utils/auth";
 import { UserInfo, UserPermission, type TokenResult } from "@/api/types/user";
 
 export const useUserStore = defineStore("pure-user", {
@@ -121,12 +127,15 @@ export const useUserStore = defineStore("pure-user", {
     /** 刷新`token` */
     async handRefreshToken() {
       return new Promise<TokenResult>((resolve, reject) => {
-        refreshTokenApi()
+        const refreshToken = getToken()?.refresh_token;
+        if (!refreshToken) {
+          reject(new Error("refresh_token 不存在"));
+          return;
+        }
+        refreshTokenApi(refreshToken)
           .then(data => {
-            if (data) {
-              setToken(data.data);
-              resolve(data.data);
-            }
+            setToken(data.data);
+            resolve(data.data);
           })
           .catch(error => {
             reject(error);

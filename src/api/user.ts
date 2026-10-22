@@ -1,4 +1,5 @@
 import { http } from "@/utils/http";
+import { formatToken } from "@/utils/auth";
 import type { UserPermission, TokenResult, UserInfo, User } from "./types/user";
 export * from "./types/user";
 
@@ -7,9 +8,13 @@ export const getLogin = (data?: object) => {
   return http.request<ApiResponse<TokenResult>>("post", "/v1/login", { data });
 };
 
-/** 刷新`token` */
-export const refreshTokenApi = () => {
-  return http.request<ApiResponse<TokenResult>>("post", "/v1/refresh-token");
+/** 刷新`token`（`Authorization` 中携带 `refresh_token`） */
+export const refreshTokenApi = (refreshToken: string) => {
+  return http.request<ApiResponse<TokenResult>>("post", "/v1/refresh-token", {
+    headers: {
+      Authorization: formatToken(refreshToken)
+    }
+  });
 };
 
 /** 用户信息 */

@@ -1,12 +1,14 @@
 import { Timestamped } from "./common";
 
 export type TokenResult = {
-  /** token */
+  /** 短期 token */
   access_token: string;
-  /** 刷新`token` */
+  /** 长期 token */
   refresh_token: string;
-  /** `token`的过期时间（时间戳） */
+  /** 短期 token的过期时间（时间戳），用于判断是否需要刷新 */
   expires_at: number;
+  /** 长期 token的过期时间（时间戳），用于设置 cookie 的存活时间 */
+  refresh_expires_at: number;
 };
 
 export type User = {
@@ -40,10 +42,7 @@ export type Menu = {
 export type UserInfo = User;
 
 /** 关联的用户信息（创建人 / 更新人） */
-export type Operator = Pick<
-  User,
-  "id" | "username" | "nickname" | "avatar"
->;
+export type Operator = Pick<User, "id" | "username" | "nickname" | "avatar">;
 
 export interface UserPermission {
   button_permissions: string[];
