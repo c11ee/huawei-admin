@@ -42,5 +42,7 @@ export const updateRoleStatus = (id: number, status: RoleStatus) => {
 
 /** 删除角色 */
 export const deleteRole = (id: number) => {
-  return http.request<ApiResponse<null>>("delete", `/v1/role/${id}`);
+  return http.request<ApiResponse<null>>("delete", "/v1/role", {
+    data: { ids: id }
+  });
 };

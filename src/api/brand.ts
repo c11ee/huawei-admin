@@ -43,5 +43,7 @@ export const updateBrandStatus = (ids: string, status: BrandStatus) => {
 
 /** 删除品牌（传入数组时按逗号分隔批量删除） */
 export const deleteBrand = (ids: number | string) => {
-  return http.request<ApiResponse<[]>>("delete", `/v1/brand/${ids}`);
+  return http.request<ApiResponse<[]>>("delete", "/v1/brand", {
+    data: { ids }
+  });
 };

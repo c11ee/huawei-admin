@@ -274,8 +274,8 @@ export const deleteProduct = (
   ids: number | string,
   force_delete: YesNoFlag = 0
 ) => {
-  return http.request<ApiResponse<[]>>("delete", `/v1/product/${ids}`, {
-    params: { force_delete }
+  return http.request<ApiResponse<[]>>("delete", "/v1/product", {
+    data: { ids, force_delete }
   });
 };
 

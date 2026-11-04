@@ -75,5 +75,7 @@ export const updateSpecTemplateStatus = (
 
 /** 删除规格模板（传入数组时按逗号分隔批量删除） */
 export const deleteSpecTemplate = (ids: number | string) => {
-  return http.request<ApiResponse<[]>>("delete", `/v1/spec-template/${ids}`);
+  return http.request<ApiResponse<[]>>("delete", "/v1/spec-template", {
+    data: { ids }
+  });
 };

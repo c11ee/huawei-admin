@@ -42,5 +42,7 @@ export const updateCategory = (id: number, data: object) => {
 
 /** 删除分类（连同其子孙分类一并删除） */
 export const deleteCategory = (id: number) => {
-  return http.request<ApiResponse<[]>>("delete", `/v1/category/${id}`);
+  return http.request<ApiResponse<[]>>("delete", "/v1/category", {
+    data: { ids: id }
+  });
 };

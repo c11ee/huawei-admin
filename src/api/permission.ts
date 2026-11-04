@@ -40,5 +40,7 @@ export const updatePermission = (id: number, data: object) => {
 
 /** 删除权限 */
 export const deletePermission = (id: number) => {
-  return http.request<ApiResponse<null>>("delete", `/v1/permissions/${id}`);
+  return http.request<ApiResponse<null>>("delete", "/v1/permissions", {
+    data: { ids: id }
+  });
 };
