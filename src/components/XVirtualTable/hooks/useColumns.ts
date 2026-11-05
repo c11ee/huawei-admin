@@ -13,10 +13,13 @@ export function useColumns(
   gridRef: Ref<VxeGridInstance | null>
 ) {
   const route = useRoute();
-  const { userInfo } = useUserStoreHook();
+  const userStoreHook = useUserStoreHook();
+
   const renderColumns = ref<Columns>(initialColumns);
   const columnsKey = computed<string>(() => {
-    return (diyKey || (route.name as string)) + "_" + userInfo?.id;
+    return (
+      (diyKey || (route.name as string)) + "_" + userStoreHook.userInfo?.id
+    );
   });
 
   /** 向服务器发送列配置 */

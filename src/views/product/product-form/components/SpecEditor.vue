@@ -49,6 +49,7 @@
                 class="w-60!"
                 placeholder="规格值，如：雅川青"
                 maxlength="50"
+                @change="emit('change')"
               />
               <XAttachmentPicker
                 v-if="item.is_image_required === 1"
@@ -194,7 +195,8 @@ const syncValueSortables = () => {
 const refreshValueSortables = () => nextTick(syncValueSortables);
 
 const addSpecItem = () => {
-  specList.value.push(createSpecItem());
+  // 新规格项不带默认规格值，等用户填值后再参与 SKU 组合，避免打乱已有 SKU 的价格
+  specList.value.push(createSpecItem(false));
   emit("change");
 };
 

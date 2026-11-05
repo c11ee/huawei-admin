@@ -18,6 +18,7 @@ import {
   updateProduct,
   type ProductDetail,
   type ProductSavePayload,
+  type ProductSkuDetail,
   type ProductStatus
 } from "@/api/product";
 import {
@@ -27,6 +28,10 @@ import {
   nextUid,
   useSpecSku
 } from "./useSpecSku";
+
+/** 提交用的记录ID：已落库为后端ID，未落库的转成带前缀的临时ID，供后端关联同一次请求中新建的记录 */
+const toPayloadId = (id: number, prefix: string) =>
+  isServerId(id) ? id : `${prefix}_${id}`;
 
 /**
  * 商品表单的页面级逻辑：选项加载、详情回填、校验组装、提交与未保存拦截
@@ -80,9 +85,9 @@ export function useProductForm() {
     specList,
     skus,
     defaultSkuId,
+    valueMetaMap,
     specTextOf,
     autoSkuName,
-    specValuesOf,
     refreshAutoSkus,
     regenerate
   } = useSpecSku({
@@ -235,14 +240,14 @@ export function useProductForm() {
         detail_html: formData.detail_html,
         mobile_detail_html: formData.mobile_detail_html
       },
-      // 未落库的规格项 / 规格值不传 id，由后端新增
+      // 未落库的规格项 / 规格值提交临时ID，由后端据此关联本次新增的记录
       specs: specList.value.map((item, index) => ({
-        id: isServerId(item.id) ? item.id : undefined,
+        id: toPayloadId(item.id, "tmp_spec"),
         name: item.name.trim(),
         is_image_required: item.is_image_required,
         sort: index + 1,
         values: item.values.map((value, valueIndex) => ({
-          id: isServerId(value.id) ? value.id : undefined,
+          id: toPayloadId(value.id, "tmp_val"),
           value: value.value.trim(),
           image_url: value.image_url || "",
           sort: valueIndex + 1
@@ -261,7 +266,10 @@ export function useProductForm() {
         volume: Number(sku.volume) || 0,
         status: sku.status,
         sort: index + 1,
-        spec_values: specValuesOf(sku.spec_value_ids)
+        sku_spec: sku.spec_value_ids.map(id => ({
+          id: toPayloadId(id, "tmp_val"),
+          spec_value_name: valueMetaMap.value.get(id) ?? ""
+        }))
       }))
     };
   };
@@ -303,7 +311,7 @@ export function useProductForm() {
         }))
       : [createSpecItem()];
 
-    /** 规格值ID查找表：`规格项名称|规格值` -> 本地规格值ID */
+    /** 规格值ID查找表：`规格项名称|规格值` -> 本地规格值ID，用于兜底匹配 */
     const valueIdMap = new Map<string, number>();
     specList.value.forEach(item => {
       item.values.forEach(value => {
@@ -311,11 +319,13 @@ export function useProductForm() {
       });
     });
 
-    /** 详情的 spec_json 用「规格项名称 / 规格值文案」表达，这里回解为本地规格值ID */
-    const toSpecValueIds = (specJson: Record<string, string> = {}) =>
-      Object.entries(specJson).flatMap(([name, value]) => {
-        const id = valueIdMap.get(`${name}|${value}`);
-        return id ? [id] : [];
+    /** 详情 SKU 的 sku_specs 已带规格值ID，优先按ID匹配，匹配不到时回退到名称+文案 */
+    const toSpecValueIds = (skuSpecs: ProductSkuDetail["sku_specs"] = []) =>
+      skuSpecs.flatMap(spec => {
+        const byId =
+          spec.spec_value_id ||
+          valueIdMap.get(`${spec.spec_name}|${spec.spec_value}`);
+        return byId ? [byId] : [];
       });
 
     const skuList = detail.skus || [];
@@ -330,7 +340,7 @@ export function useProductForm() {
       weight: Number(sku.weight) || 0,
       volume: Number(sku.volume) || 0,
       status: sku.status,
-      spec_value_ids: toSpecValueIds(sku.spec_json),
+      spec_value_ids: toSpecValueIds(sku.sku_specs),
       auto_name: false
     }));
 
