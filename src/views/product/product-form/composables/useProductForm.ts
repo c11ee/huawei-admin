@@ -18,7 +18,7 @@ import {
   updateProduct,
   type ProductDetail,
   type ProductSavePayload,
-  type ProductSkuDetail,
+  type ProductSku,
   type ProductStatus
 } from "@/api/product";
 import {
@@ -320,7 +320,7 @@ export function useProductForm() {
     });
 
     /** 详情 SKU 的 sku_specs 已带规格值ID，优先按ID匹配，匹配不到时回退到名称+文案 */
-    const toSpecValueIds = (skuSpecs: ProductSkuDetail["sku_specs"] = []) =>
+    const toSpecValueIds = (skuSpecs: ProductSku["sku_specs"] = []) =>
       skuSpecs.flatMap(spec => {
         const byId =
           spec.spec_value_id ||

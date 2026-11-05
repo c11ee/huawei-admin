@@ -181,17 +181,6 @@ export type ProductSpec = {
   values: ProductSpecValue[];
 } & Timestamped;
 
-/** SKU 关联的规格值（详情接口返回，含规格信息与中间表数据） */
-export type ProductSkuSpecValue = ProductSpecValue & {
-  pivot: {
-    sku_id: number;
-    spec_value_id: number;
-    spu_id: number;
-    spec_id: number;
-  };
-  spec: Omit<ProductSpec, "values">;
-};
-
 /** SKU 数据结构（价格字段为字符串，如 "6999.00"） */
 export type ProductSku = {
   /** 记录ID */
@@ -235,11 +224,6 @@ export type ProductSku = {
   /** 规格组合（原 spec_json 已删除） */
   sku_specs: SkuSpec[];
 } & Timestamped;
-
-/** SKU 详情结构（编辑回显）：在 SKU 基础上额外返回 spec_values */
-export type ProductSkuDetail = ProductSku & {
-  spec_values: ProductSkuSpecValue[];
-};
 
 /** SPU 提交结构 */
 export type ProductSpuPayload = {
@@ -307,7 +291,7 @@ export type ProductDetail = Omit<Product, "creator" | "updater"> & {
   /** 规格项与规格值 */
   specs: ProductSpec[];
   /** SKU列表 */
-  skus: ProductSkuDetail[];
+  skus: ProductSku[];
 };
 
 /** 商品列表各状态的数量统计 */
