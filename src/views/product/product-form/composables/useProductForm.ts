@@ -89,6 +89,7 @@ export function useProductForm() {
     specTextOf,
     autoSkuName,
     refreshAutoSkus,
+    resetSkuNames,
     regenerate
   } = useSpecSku({
     getProductName: () => formData.product_name
@@ -366,7 +367,6 @@ export function useProductForm() {
   const handleSave = async () => {
     const data = await getFormData();
     if (!data) return;
-
     saving.value = true;
     try {
       const res = isEdit.value
@@ -473,6 +473,7 @@ export function useProductForm() {
     skus,
     defaultSkuId,
     regenerate,
+    resetSkuNames,
     handleTemplateChange,
     handleCancel,
     handleSave

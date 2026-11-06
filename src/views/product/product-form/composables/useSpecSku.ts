@@ -71,6 +71,14 @@ export function useSpecSku({ getProductName }: UseSpecSkuOptions) {
     });
   };
 
+  /** 按商品名称 + 规格值强制重算全部 SKU 名称（含手动改过名的） */
+  const resetSkuNames = () => {
+    skus.value.forEach(sku => {
+      sku.name = autoSkuName(sku.spec_value_ids);
+      sku.auto_name = true;
+    });
+  };
+
   /** 按规格值做笛卡尔积，重新生成 SKU 列表（保留已填写的同组合数据） */
   const regenerate = () => {
     // 只把已填写文案的规格值纳入组合：刚添加、还没填值的规格项/规格值不参与，
@@ -101,36 +109,66 @@ export function useSpecSku({ getProductName }: UseSpecSkuOptions) {
       previous.map(sku => [keyOf(sku.spec_value_ids), sku])
     );
 
+    /** 本次已沿用 ID 的旧 SKU：一个旧 SKU 最多只能被一个组合沿用，避免提交重复ID */
+    const usedPrevIds = new Set<number>();
+
+    // 先给组合完全一致的 SKU 占位，避免被后面的子集匹配抢占
+    const exactPrevMap = new Map<number, SkuDraft>();
+    combos.forEach((values, index) => {
+      const exact = exactMap.get(keyOf(values.map(value => value.id)));
+      if (!exact || usedPrevIds.has(exact.id)) return;
+      usedPrevIds.add(exact.id);
+      exactPrevMap.set(index, exact);
+    });
+
     /**
      * 查找可复用数据的旧 SKU：
-     * 1. 规格组合完全一致时直接复用；
-     * 2. 新增规格项后组合变多，此时复用「旧组合是新组合子集」的 SKU 的价格等数据，
-     *    避免每加一个规格项就要把所有价格重填一遍。
+     * 1. 规格组合完全一致时直接沿用原 SKU；
+     * 2. 只新增了一个规格值（如编辑时新增规格项后填了第一个值）时，旧 SKU 只是多挂一条
+     *    sku_spec，沿用原 ID，避免保存时整批 SKU 变成新增；
+     * 3. 其余新增组合只复用「旧组合是新组合子集」的价格等数据，ID 按新增处理
+     *    （保存时为 undefined），避免每加一个规格项就要把所有价格重填一遍。
      */
     const findPrevious = (valueIds: number[]) => {
-      const exact = exactMap.get(keyOf(valueIds));
-      if (exact) return { sku: exact, exact: true };
-
       const idSet = new Set(valueIds);
-      let matched: SkuDraft | undefined;
-      previous.forEach(sku => {
+      const candidates = previous.filter(sku => {
         const oldIds = sku.spec_value_ids;
-        if (!oldIds.length || oldIds.length >= valueIds.length) return;
-        if (!oldIds.every(id => idSet.has(id))) return;
-        if (!matched || oldIds.length > matched.spec_value_ids.length) {
-          matched = sku;
-        }
+        return (
+          oldIds.length > 0 &&
+          oldIds.length < valueIds.length &&
+          oldIds.every(id => idSet.has(id))
+        );
       });
-      return { sku: matched, exact: false };
+      if (!candidates.length) return { sku: undefined, reuseId: false };
+
+      const reusable = candidates.find(
+        sku =>
+          sku.spec_value_ids.length === valueIds.length - 1 &&
+          !usedPrevIds.has(sku.id)
+      );
+      if (reusable) {
+        usedPrevIds.add(reusable.id);
+        return { sku: reusable, reuseId: true };
+      }
+
+      const matched = candidates.reduce((longest, sku) =>
+        sku.spec_value_ids.length > longest.spec_value_ids.length
+          ? sku
+          : longest
+      );
+      return { sku: matched, reuseId: false };
     };
 
-    skus.value = combos.map(values => {
+    skus.value = combos.map((values, index) => {
       const valueIds = values.map(v => v.id);
-      const { sku: prev, exact } = findPrevious(valueIds);
+      const exact = exactPrevMap.get(index);
+      const { sku: prev, reuseId } = exact
+        ? { sku: exact, reuseId: true }
+        : findPrevious(valueIds);
       return {
-        // 组合完全一致的沿用原 SKU；新增组合视为新 SKU
-        id: exact && prev ? prev.id : nextUid(),
-        name: exact ? prev?.name ?? "" : "",
+        // 组合完全一致或只多挂一个规格值时沿用原 SKU；其余组合视为新 SKU
+        id: prev && reuseId ? prev.id : nextUid(),
+        name: reuseId ? (prev?.name ?? "") : "",
         image_url: prev?.image_url ?? "",
         sale_price: prev?.sale_price ?? 0,
         cost_price: prev?.cost_price ?? 0,
@@ -140,8 +178,8 @@ export function useSpecSku({ getProductName }: UseSpecSkuOptions) {
         volume: prev?.volume ?? 0,
         status: prev?.status ?? 1,
         spec_value_ids: valueIds,
-        // 新增组合的名称按最新规格值重新生成
-        auto_name: exact ? prev?.auto_name ?? true : true
+        // 沿用的 SKU 保持原有命名状态；新增组合的名称按最新规格值重新生成
+        auto_name: reuseId ? (prev?.auto_name ?? true) : true
       };
     });
 
@@ -160,6 +198,7 @@ export function useSpecSku({ getProductName }: UseSpecSkuOptions) {
     specTextOf,
     autoSkuName,
     refreshAutoSkus,
+    resetSkuNames,
     regenerate
   };
 }

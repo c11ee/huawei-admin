@@ -4,14 +4,24 @@
       <span class="text-xs text-(--el-text-color-secondary)">
         共 {{ skus.length }} 条，规格项/规格值变更后自动重新生成
       </span>
-      <el-button
-        link
-        type="primary"
-        :icon="Refresh"
-        @click="emit('regenerate')"
-      >
-        重新生成
-      </el-button>
+      <div class="flex items-center">
+        <el-button
+          link
+          type="primary"
+          :icon="Refresh"
+          @click="emit('regenerate')"
+        >
+          重新生成
+        </el-button>
+        <el-button
+          link
+          type="primary"
+          :icon="EditPen"
+          @click="emit('regenerate-names')"
+        >
+          重命名
+        </el-button>
+      </div>
     </div>
 
     <el-table
@@ -209,7 +219,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, watch } from "vue";
-import { Refresh } from "@element-plus/icons-vue";
+import { Refresh, EditPen } from "@element-plus/icons-vue";
 import XAttachmentPicker from "@/components/XAttachmentPicker/index.vue";
 import type {
   BatchNumberField,
@@ -232,7 +242,7 @@ const defaultSkuId = defineModel<number | undefined>("defaultSkuId", {
   required: true
 });
 
-const emit = defineEmits<{ regenerate: [] }>();
+const emit = defineEmits<{ regenerate: []; "regenerate-names": [] }>();
 
 /** 是否为批量设置行 */
 const isBatchRow = (row: TableAnyRow): row is SkuBatchRow & TableAnyRow =>

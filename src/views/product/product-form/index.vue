@@ -193,6 +193,7 @@
                   v-model:default-sku-id="defaultSkuId"
                   :spec-list="specList"
                   @regenerate="regenerate"
+                  @regenerate-names="resetSkuNames"
                 />
               </el-form-item>
             </el-scrollbar>
@@ -255,6 +256,7 @@ const {
   skus,
   defaultSkuId,
   regenerate,
+  resetSkuNames,
   handleTemplateChange,
   handleCancel,
   handleSave
