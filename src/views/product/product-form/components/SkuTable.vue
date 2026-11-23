@@ -185,7 +185,7 @@
             class="w-full"
             size="small"
             :min="0"
-            :precision="6"
+            :precision="4"
             :controls="false"
             :placeholder="isBatchRow(row) ? '批量' : ''"
             @change="handleBatchNumber(row, 'volume')"
